@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Movie Recommender</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"
+    />
+    <style>
+      :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #e74c3c;
+        --accent-color: #3498db;
+        --light-color: #ecf0f1;
+        --dark-color: #2c3e50;
+        --border-radius: 8px;
+        --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        --transition: all 0.3s ease;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f9f9f9;
+        color: var(--dark-color);
+        line-height: 1.6;
+      }
+
+      .container {
+        width: 90%;
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+
+      .header {
+        text-align: center;
+        padding: 2rem 0;
+        background: linear-gradient(
+          135deg,
+          var(--primary-color),
+          var(--accent-color)
+        );
+        color: white;
+        border-radius: var(--border-radius);
+        margin-bottom: 2rem;
+        box-shadow: var(--box-shadow);
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .sections-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .section {
+        background-color: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--box-shadow);
+        transition: var(--transition);
+      }
+
+      .section:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+      }
+
+      h2 {
+        color: var(--primary-color);
+        padding-bottom: 0.75rem;
+        margin-bottom: 1rem;
+        border-bottom: 2px solid var(--light-color);
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+      }
+
+      h2 i {
+        margin-right: 0.5rem;
+        color: var(--secondary-color);
+      }
+
+      .input-group {
+        margin-bottom: 1rem;
+      }
+
+      input[type='text'],
+      input[type='number'] {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: var(--border-radius);
+        font-size: 1rem;
+        transition: var(--transition);
+        background-color: var(--light-color);
+      }
+
+      input[type='text']:focus,
+      input[type='number']:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+      }
+
+      button {
+        width: 100%;
+        padding: 0.75rem;
+        background-color: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: var(--transition);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      button:hover {
+        background-color: #2980b9;
+        transform: translateY(-2px);
+      }
+
+      button i {
+        margin-right: 0.5rem;
+      }
+
+      .results {
+        margin-top: 1.5rem;
+        max-height: 300px;
+        overflow-y: auto;
+        border-radius: var(--border-radius);
+        background-color: var(--light-color);
+        padding: 0.5rem;
+      }
+
+      .results:empty {
+        display: none;
+      }
+
+      /* Improved movie result cards */
+      .movie-list {
+        list-style-type: none;
+      }
+
+      /* Styling for results list and items */
+      ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      li {
+        background-color: white;
+        margin-bottom: 12px;
+        border-radius: var(--border-radius);
+        padding: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: var(--transition);
+        position: relative;
+        border-left: 4px solid var(--accent-color);
+      }
+
+      li:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      li:last-child {
+        margin-bottom: 0;
+      }
+
+      /* Styling for label-value pairs */
+      .label {
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-right: 8px;
+      }
+
+      .value {
+        color: var(--secondary-color);
+        font-weight: normal;
+      }
+
+      /* Movie header styling */
+      .movie-card {
+        background-color: white;
+        border-radius: var(--border-radius);
+        margin-bottom: 0.8rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        transition: var(--transition);
+        overflow: hidden;
+      }
+
+      .movie-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .movie-card:last-child {
+        margin-bottom: 0;
+      }
+
+      .movie-header {
+        padding: 0.8rem;
+        background-color: var(--primary-color);
+        color: white;
+        font-weight: bold;
+        border-top-left-radius: var(--border-radius);
+        border-top-right-radius: var(--border-radius);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .movie-title {
+        flex-grow: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .movie-id {
+        background-color: var(--secondary-color);
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 100px;
+        font-size: 0.8rem;
+        margin-left: 0.5rem;
+        white-space: nowrap;
+      }
+
+      .movie-content {
+        padding: 0.8rem;
+      }
+
+      .movie-detail {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.4rem 0;
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      .movie-detail:last-child {
+        border-bottom: none;
+      }
+
+      .detail-label {
+        font-weight: 600;
+        color: var(--primary-color);
+      }
+
+      .detail-value {
+        color: var(--secondary-color);
+        text-align: right;
+        max-width: 60%;
+        word-wrap: break-word;
+      }
+
+      /* Special styling for specific results */
+      .text-result {
+        background-color: white;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        line-height: 1.5;
+      }
+
+      /* Genres styling */
+      .genre-tag {
+        display: inline-block;
+        background-color: var(--accent-color);
+        color: white;
+        font-size: 0.8rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 100px;
+        margin: 0.2rem;
+      }
+
+      /* Rating styling */
+      .rating {
+        display: flex;
+        align-items: center;
+      }
+
+      .rating i {
+        color: #f1c40f;
+        margin-right: 0.2rem;
+      }
+
+      .footer {
+        text-align: center;
+        padding: 2rem 0;
+        margin-top: 2rem;
+        color: var(--dark-color);
+        font-size: 0.9rem;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        .sections-container {
+          grid-template-columns: 1fr;
+        }
+
+        .header h1 {
+          font-size: 2rem;
+        }
+      }
+
+      /* Loading indicator */
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 1rem;
+      }
+
+      .loading i {
+        color: var(--accent-color);
+        font-size: 2rem;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Empty state styling */
+      .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #7f8c8d;
+      }
+
+      .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+      }
+
+      /* Pagination controls */
+      .pagination {
+        display: flex;
+        justify-content: center;
+        margin-top: 1rem;
+      }
+
+      .pagination button {
+        width: auto;
+        padding: 0.4rem 0.8rem;
+        margin: 0 0.2rem;
+        background-color: var(--light-color);
+        color: var(--primary-color);
+        border: 1px solid #ddd;
+      }
+
+      .pagination button.active {
+        background-color: var(--accent-color);
+        color: white;
+      }
+
+      /* Badge for movie ID or other identifiers */
+      .id-badge {
+        background-color: var(--dark-color);
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 100px;
+        font-size: 0.8rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1><i class="fas fa-film"></i> Movie Recommender</h1>
+        <p>Discover your next favorite movie</p>
+      </div>
+
+      <div class="sections-container">
+        <div class="section">
+          <h2><i class="fas fa-search"></i> Search Movie</h2>
+          <div class="input-group">
+            <input
+              type="text"
+              id="searchQuery"
+              placeholder="Enter movie title"
+            />
+          </div>
+          <button onclick="searchMovies()">
+            <i class="fas fa-search"></i> Search
+          </button>
+          <div id="searchLoading" class="loading">
+            <i class="fas fa-spinner"></i>
+          </div>
+          <div id="searchResults" class="results"></div>
+        </div>
+
+        <div class="section">
+          <h2><i class="fas fa-info-circle"></i> Movie Details</h2>
+          <div class="input-group">
+            <input type="number" id="movieId" placeholder="Enter movie ID" />
+          </div>
+          <button onclick="getMovieDetails()">
+            <i class="fas fa-info-circle"></i> Get Details
+          </button>
+          <div id="movieDetailsLoading" class="loading">
+            <i class="fas fa-spinner"></i>
+          </div>
+          <div id="movieDetails" class="results"></div>
+        </div>
+
+        <div class="section">
+          <h2><i class="fas fa-tags"></i> Content-Based</h2>
+          <div class="input-group">
+            <input
+              type="text"
+              id="contentTitle"
+              placeholder="Enter movie title"
+            />
+          </div>
+          <button onclick="getContentRecommendations()">
+            <i class="fas fa-lightbulb"></i> Get Recommendations
+          </button>
+          <div id="contentLoading" class="loading">
+            <i class="fas fa-spinner"></i>
+          </div>
+          <div id="contentResults" class="results"></div>
+        </div>
+
+        <div class="section">
+          <h2><i class="fas fa-film"></i> Item-Based</h2>
+          <div class="input-group">
+            <input type="number" id="itemId" placeholder="Enter movie ID" />
+          </div>
+          <button onclick="getItemRecommendations()">
+            <i class="fas fa-lightbulb"></i> Get Recommendations
+          </button>
+          <div id="itemLoading" class="loading">
+            <i class="fas fa-spinner"></i>
+          </div>
+          <div id="itemResults" class="results"></div>
+        </div>
+
+        <div class="section">
+          <h2><i class="fas fa-user"></i> User-Based</h2>
+          <div class="input-group">
+            <input type="number" id="userId" placeholder="Enter user ID" />
+          </div>
+          <button onclick="getUserRecommendations()">
+            <i class="fas fa-lightbulb"></i> Get Recommendations
+          </button>
+          <div id="userLoading" class="loading">
+            <i class="fas fa-spinner"></i>
+          </div>
+          <div id="userResults" class="results"></div>
+        </div>
+
+        <div class="section">
+          <h2><i class="fas fa-video"></i> By Director (Movie)</h2>
+          <div class="input-group">
+            <input
+              type="number"
+              id="directorMovieId"
+              placeholder="Enter movie ID"
+            />
+          </div>
+          <button onclick="getDirectorMovieRecommendations()">
+            <i class="fas fa-lightbulb"></i> Get Recommendations
+          </button>
+          <div id="directorMovieLoading" class="loading">
+            <i class="fas fa-spinner"></i>
+          </div>
+          <div id="directorMovieResults" class="results"></div>
+        </div>
+
+        <div class="section">
+          <h2><i class="fas fa-user-tie"></i> By Director (Name)</h2>
+          <div class="input-group">
+            <input
+              type="text"
+              id="directorName"
+              placeholder="Enter director name"
+            />
+          </div>
+          <button onclick="getDirectorNameRecommendations()">
+            <i class="fas fa-lightbulb"></i> Get Recommendations
+          </button>
+          <div id="directorNameLoading" class="loading">
+            <i class="fas fa-spinner"></i>
+          </div>
+          <div id="directorNameResults" class="results"></div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>
+          &copy; 2025 Movie Recommender System | All Rights Reserved | Made by
+          Fabrizio and Giuseppe
+        </p>
+      </div>
+    </div>
+
+    <script>
+      const API_URL = 'http://127.0.0.1:5000'; // Replace with your API URL
+
+      // Show loading indicator
+      function showLoading(id) {
+        document.getElementById(id).style.display = 'block';
+      }
+
+      // Hide loading indicator
+      function hideLoading(id) {
+        document.getElementById(id).style.display = 'none';
+      }
+
+      async function searchMovies() {
+        const query = document.getElementById('searchQuery').value;
+        if (!query) return;
+
+        showLoading('searchLoading');
+        try {
+          const response = await fetch(`${API_URL}/search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query }),
+          });
+          const results = await response.json();
+          displayResults('searchResults', results, ['id', 'title', 'genres']);
+        } catch (error) {
+          displayError('searchResults', error);
+        } finally {
+          hideLoading('searchLoading');
+        }
+      }
+
+      async function getMovieDetails() {
+        const movieId = document.getElementById('movieId').value;
+        if (!movieId) return;
+
+        showLoading('movieDetailsLoading');
+        try {
+          const response = await fetch(`${API_URL}/movie/${movieId}`);
+          const details = await response.json();
+          displayDetails('movieDetails', details);
+        } catch (error) {
+          displayError('movieDetails', error);
+        } finally {
+          hideLoading('movieDetailsLoading');
+        }
+      }
+
+      async function getContentRecommendations() {
+        const title = document.getElementById('contentTitle').value;
+        if (!title) return;
+
+        showLoading('contentLoading');
+        try {
+          const response = await fetch(`${API_URL}/recommend/content`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title }),
+          });
+          const results = await response.json();
+          displayResults('contentResults', results, ['id', 'title', 'genres']);
+        } catch (error) {
+          displayError('contentResults', error);
+        } finally {
+          hideLoading('contentLoading');
+        }
+      }
+
+      async function getItemRecommendations() {
+        const movieId = document.getElementById('itemId').value;
+        if (!movieId) return;
+
+        showLoading('itemLoading');
+        try {
+          const response = await fetch(`${API_URL}/recommend/item`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ movie_id: parseInt(movieId) }),
+          });
+          const results = await response.json();
+          console.log(results);
+          displayResults('itemResults', results, ['id', 'title', 'genres']);
+        } catch (error) {
+          displayError('itemResults', error);
+        } finally {
+          hideLoading('itemLoading');
+        }
+      }
+
+      async function getUserRecommendations() {
+        const userId = document.getElementById('userId').value;
+        if (!userId) return;
+
+        showLoading('userLoading');
+        try {
+          const response = await fetch(`${API_URL}/recommend/user`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: parseInt(userId) }),
+          });
+          const results = await response.json();
+          displayResults('userResults', results, [
+            'id',
+            'title',
+            'genres',
+            'values',
+          ]);
+        } catch (error) {
+          displayError('userResults', error);
+        } finally {
+          hideLoading('userLoading');
+        }
+      }
+
+      async function getDirectorMovieRecommendations() {
+        const movieId = document.getElementById('directorMovieId').value;
+        if (!movieId) return;
+
+        showLoading('directorMovieLoading');
+        try {
+          const response = await fetch(`${API_URL}/recommend/director/movie`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ movie_id: parseInt(movieId) }),
+          });
+          const results = await response.json();
+          displayDirectorResults('directorMovieResults', results.result);
+        } catch (error) {
+          displayError('directorMovieResults', error);
+        } finally {
+          hideLoading('directorMovieLoading');
+        }
+      }
+
+      async function getDirectorNameRecommendations() {
+        const director = document.getElementById('directorName').value;
+        if (!director) return;
+
+        showLoading('directorNameLoading');
+        try {
+          const response = await fetch(`${API_URL}/recommend/director/name`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ director }),
+          });
+          const results = await response.json();
+          displayDirectorResults('directorNameResults', results.result);
+        } catch (error) {
+          displayError('directorNameResults', error);
+        } finally {
+          hideLoading('directorNameLoading');
+        }
+      }
+
+      function displayResults(elementId, results, columns) {
+        const element = document.getElementById(elementId);
+        element.innerHTML = '';
+
+        if (results && results.length > 0) {
+          const list = document.createElement('ul');
+          list.className = 'movie-list';
+
+          results.forEach((item) => {
+            const listItem = document.createElement('li');
+            listItem.className = 'movie-card';
+
+            // Create header with movie title and ID
+            const header = document.createElement('div');
+            header.className = 'movie-header';
+
+            // Add title span
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'movie-title';
+            titleSpan.textContent = item.title || 'Unknown Title';
+            header.appendChild(titleSpan);
+
+            // Add ID badge if ID exists
+            if (item.id) {
+              const idBadge = document.createElement('span');
+              idBadge.className = 'movie-id';
+              idBadge.textContent = `ID: ${item.id}`;
+              header.appendChild(idBadge);
+            }
+
+            listItem.appendChild(header);
+
+            const itemContent = document.createElement('div');
+            itemContent.className = 'movie-content';
+
+            // Add each column except title (already in header)
+            columns.forEach((col) => {
+              // Skip title and id as they're in the header
+              if (col === 'title' || col === 'id') return;
+
+              const detail = document.createElement('div');
+              detail.className = 'movie-detail';
+
+              const label = document.createElement('span');
+              label.className = 'detail-label';
+              label.textContent =
+                col.charAt(0).toUpperCase() + col.slice(1) + ':';
+
+              const value = document.createElement('span');
+              value.className = 'detail-value';
+              value.textContent = item[col];
+
+              detail.appendChild(label);
+              detail.appendChild(value);
+              itemContent.appendChild(detail);
+            });
+
+            listItem.appendChild(itemContent);
+            list.appendChild(listItem);
+          });
+
+          element.appendChild(list);
+        } else {
+          displayEmptyState(element);
+        }
+      }
+
+      function displayDetails(elementId, details) {
+        const element = document.getElementById(elementId);
+        element.innerHTML = '';
+
+        if (details && Object.keys(details).length > 0) {
+          const movieCard = document.createElement('div');
+          movieCard.className = 'movie-card';
+
+          // Create header with the movie title and ID
+          const header = document.createElement('div');
+          header.className = 'movie-header';
+
+          // Add title span
+          const titleSpan = document.createElement('span');
+          titleSpan.className = 'movie-title';
+          titleSpan.textContent = details.title || 'Movie Details';
+          header.appendChild(titleSpan);
+
+          // Add ID badge if ID exists
+          if (details.id) {
+            const idBadge = document.createElement('span');
+            idBadge.className = 'movie-id';
+            idBadge.textContent = `ID: ${details.id}`;
+            header.appendChild(idBadge);
+          }
+
+          movieCard.appendChild(header);
+
+          const content = document.createElement('div');
+          content.className = 'movie-content';
+
+          for (const key in details) {
+            // Skip title and id in details as they're already in the header
+            if (key === 'title' || key === 'id') continue;
+
+            const detail = document.createElement('div');
+            detail.className = 'movie-detail';
+
+            const label = document.createElement('span');
+            label.className = 'detail-label';
+            label.textContent =
+              key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+
+            const value = document.createElement('span');
+            value.className = 'detail-value';
+            value.textContent = details[key];
+
+            detail.appendChild(label);
+            detail.appendChild(value);
+            content.appendChild(detail);
+          }
+
+          movieCard.appendChild(content);
+          element.appendChild(movieCard);
+        } else {
+          displayEmptyState(element);
+        }
+      }
+
+      function displayDirectorResults(elementId, result) {
+        const element = document.getElementById(elementId);
+        element.innerHTML = '';
+
+        if (result) {
+          const resultCard = document.createElement('div');
+          resultCard.className = 'text-result';
+          resultCard.textContent = result;
+          element.appendChild(resultCard);
+        } else {
+          displayEmptyState(element);
+        }
+      }
+
+      function displayError(elementId, error) {
+        const element = document.getElementById(elementId);
+        element.innerHTML = '';
+
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'empty-state';
+
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-exclamation-circle';
+
+        const message = document.createElement('p');
+        message.textContent = 'An error occurred. Please try again.';
+
+        errorDiv.appendChild(icon);
+        errorDiv.appendChild(message);
+        element.appendChild(errorDiv);
+
+        console.error('API Error:', error);
+      }
+
+      function displayEmptyState(element) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'empty-state';
+
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-film';
+
+        const message = document.createElement('p');
+        message.textContent = 'No results found. Try a different search.';
+
+        emptyDiv.appendChild(icon);
+        emptyDiv.appendChild(message);
+        element.appendChild(emptyDiv);
+      }
+
+      // Add event listeners for Enter key
+      document
+        .getElementById('searchQuery')
+        .addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') searchMovies();
+        });
+
+      document.getElementById('movieId').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') getMovieDetails();
+      });
+
+      document
+        .getElementById('contentTitle')
+        .addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') getContentRecommendations();
+        });
+
+      document.getElementById('itemId').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') getItemRecommendations();
+      });
+
+      document.getElementById('userId').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') getUserRecommendations();
+      });
+
+      document
+        .getElementById('directorMovieId')
+        .addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') getDirectorMovieRecommendations();
+        });
+
+      document
+        .getElementById('directorName')
+        .addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') getDirectorNameRecommendations();
+        });
+    </script>
+  </body>
+</html>
