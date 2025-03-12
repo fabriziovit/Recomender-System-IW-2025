@@ -35,7 +35,7 @@
 
       .container {
         width: 90%;
-        max-width: 1200px;
+        max-width: 1600px;
         margin: 2rem auto;
         padding: 0 1rem;
       }
@@ -52,6 +52,63 @@
         border-radius: var(--border-radius);
         margin-bottom: 2rem;
         box-shadow: var(--box-shadow);
+      }
+
+      .original-movie-banner {
+        background-color: #f0f8ff;
+        border-left: 4px solid #3498db;
+        padding: 12px 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+
+      .original-movie-banner h3 {
+        margin: 0 0 8px 0;
+        font-size: 1rem;
+        color: #555;
+        font-weight: 600;
+      }
+
+      .original-movie-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #2c3e50;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .original-movie-id {
+        font-size: 0.8rem;
+        background-color: #e0e0e0;
+        color: #555;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: normal;
+      }
+
+      /* Miglioramenti per la lista di film esistente */
+      .movie-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .movie-card {
+        border-radius: 6px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        background-color: white;
+      }
+
+      .movie-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
       }
 
       .header h1 {
@@ -310,6 +367,95 @@
         font-size: 0.9rem;
       }
 
+      .result-card {
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      .result-header {
+        border-bottom: 1px solid #e0e0e0;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+      }
+
+      .result-header h3 {
+        color: #333;
+        font-size: 1.4rem;
+        margin: 0 0 5px 0;
+      }
+
+      .result-header p {
+        color: #666;
+        font-size: 0.9rem;
+        margin: 0;
+      }
+
+      .films-list {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .film-item {
+        background-color: white;
+        border-radius: 6px;
+        padding: 15px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        transition: transform 0.2s ease;
+      }
+
+      .film-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .film-item h4 {
+        color: #2c3e50;
+        font-size: 1.1rem;
+        margin: 0 0 10px 0;
+        border-left: 3px solid #3498db;
+        padding-left: 10px;
+      }
+
+      .actors-list {
+        margin-left: 15px;
+      }
+
+      .actors-list p {
+        font-weight: 600;
+        margin: 10px 0 5px 0;
+        color: #555;
+        font-size: 0.95rem;
+      }
+
+      .actors-list ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .actors-list li {
+        margin-bottom: 3px;
+        color: #555;
+      }
+
+      .additional-info {
+        font-style: italic;
+        color: #888;
+        margin: 5px 0 0 0;
+        font-size: 0.85rem;
+      }
+
+      .error-message {
+        background-color: #ffecec;
+        border-left: 4px solid #f44336;
+        padding: 15px;
+        color: #d32f2f;
+        border-radius: 4px;
+      }
+
       /* Responsive adjustments */
       @media (max-width: 768px) {
         .sections-container {
@@ -332,6 +478,22 @@
         color: var(--accent-color);
         font-size: 2rem;
         animation: spin 1s linear infinite;
+      }
+
+      .result-card {
+        padding: 15px;
+      }
+
+      .result-header h3 {
+        font-size: 1.2rem;
+      }
+
+      .film-item {
+        padding: 12px;
+      }
+
+      .film-item h4 {
+        font-size: 1rem;
       }
 
       @keyframes spin {
@@ -673,11 +835,41 @@
         }
       }
 
-      function displayResults(elementId, results, columns) {
+      function displayResults(elementId, data, columns) {
         const element = document.getElementById(elementId);
         element.innerHTML = '';
 
+        // Verifica se i dati sono nel nuovo formato con original_movie e recommendations
+        const hasOriginalMovie =
+          data && data.original_movie && data.original_movie.title;
+        const results = hasOriginalMovie ? data.recommendations : data;
+
         if (results && results.length > 0) {
+          // Se abbiamo informazioni sul film originale, creiamo un banner in cima
+          if (hasOriginalMovie) {
+            const originalMovieBanner = document.createElement('div');
+            originalMovieBanner.className = 'original-movie-banner';
+
+            const bannerTitle = document.createElement('h3');
+            bannerTitle.textContent = 'Raccomandazioni basate su:';
+
+            const movieTitle = document.createElement('div');
+            movieTitle.className = 'original-movie-title';
+            movieTitle.textContent = data.original_movie.title;
+
+            // Se è disponibile anche l'ID, lo mostriamo
+            if (data.original_movie.id) {
+              const movieId = document.createElement('span');
+              movieId.className = 'original-movie-id';
+              movieId.textContent = `ID: ${data.original_movie.id}`;
+              movieTitle.appendChild(movieId);
+            }
+
+            originalMovieBanner.appendChild(bannerTitle);
+            originalMovieBanner.appendChild(movieTitle);
+            element.appendChild(originalMovieBanner);
+          }
+
           const list = document.createElement('ul');
           list.className = 'movie-list';
 
@@ -803,11 +995,82 @@
         const element = document.getElementById(elementId);
         element.innerHTML = '';
 
-        if (result) {
+        if (result && result.success) {
           const resultCard = document.createElement('div');
-          resultCard.className = 'text-result';
-          resultCard.textContent = result;
+          resultCard.className = 'result-card';
+
+          // Intestazione con informazioni sul regista
+          const header = document.createElement('div');
+          header.className = 'result-header';
+          header.innerHTML = `<h3>Film diretti da ${result.director}</h3>
+                           <p>Mostrati ${result.films_shown} di ${result.total_films_found} film totali</p>`;
+          resultCard.appendChild(header);
+
+          // Lista dei film
+          if (result.films && result.films.length > 0) {
+            const filmsList = document.createElement('div');
+            filmsList.className = 'films-list';
+
+            result.films.forEach((film) => {
+              const filmItem = document.createElement('div');
+              filmItem.className = 'film-item';
+
+              // Titolo e anno
+              const filmHeader = document.createElement('h4');
+              filmHeader.textContent = `${film.id}. ${film.title} (${film.year})`;
+              filmItem.appendChild(filmHeader);
+
+              // Attori
+              if (film.actors && film.actors.length > 0) {
+                const actorsList = document.createElement('div');
+                actorsList.className = 'actors-list';
+
+                const actorsTitle = document.createElement('p');
+                actorsTitle.textContent = 'Attori principali:';
+                actorsList.appendChild(actorsTitle);
+
+                const actorsUl = document.createElement('ul');
+                film.actors.forEach((actor) => {
+                  const actorLi = document.createElement('li');
+                  actorLi.textContent = actor;
+                  actorsUl.appendChild(actorLi);
+                });
+                actorsList.appendChild(actorsUl);
+
+                // Se ci sono attori aggiuntivi
+                if (film.additional_actors_count > 0) {
+                  const additionalInfo = document.createElement('p');
+                  additionalInfo.className = 'additional-info';
+                  additionalInfo.textContent = `... e altri ${film.additional_actors_count} attori`;
+                  actorsList.appendChild(additionalInfo);
+                }
+
+                filmItem.appendChild(actorsList);
+              } else {
+                const noActors = document.createElement('p');
+                noActors.textContent = 'Attori: Informazione non disponibile';
+                filmItem.appendChild(noActors);
+              }
+
+              filmsList.appendChild(filmItem);
+            });
+
+            resultCard.appendChild(filmsList);
+          } else {
+            const noFilms = document.createElement('p');
+            noFilms.textContent = 'Nessun film disponibile';
+            resultCard.appendChild(noFilms);
+          }
+
           element.appendChild(resultCard);
+        } else if (result && !result.success) {
+          // Gestione caso di errore restituito dal server
+          const errorMessage = document.createElement('div');
+          errorMessage.className = 'error-message';
+          errorMessage.textContent =
+            result.message ||
+            'Si è verificato un errore durante il recupero dei film.';
+          element.appendChild(errorMessage);
         } else {
           displayEmptyState(element);
         }

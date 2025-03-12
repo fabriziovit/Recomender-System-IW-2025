@@ -131,7 +131,7 @@ class MovieRecommenderApp:
 
 app_instance = MovieRecommenderApp()
 
-@app.route('/search', methods=['POST']) #Funziona
+@app.route('/search', methods=['POST'])
 def search_movies():
     data = request.get_json()
     query = data.get('query', '')
@@ -139,34 +139,57 @@ def search_movies():
     results = app_instance.search_movie_by_title(title)
     return jsonify(results)
 
-@app.route('/movie/<int:movie_id>', methods=['GET']) #Funziona
+@app.route('/movie/<int:movie_id>', methods=['GET'])
 def movie_details(movie_id):
     details = app_instance.show_movie_details(movie_id)
     print(details)
     return jsonify(details)
 
-@app.route('/recommend/content', methods=['POST']) # Funziona
+@app.route('/recommend/content', methods=['POST'])
 def content_recommendations():
     data = request.get_json()
-    title = data.get('query', '')
-    title = app_instance.movie_finder(title)
+    query = data.get('query', '')
+    title = app_instance.movie_finder(query)
     top_n = data.get('top_n', 10)
     results = app_instance.run_content_recommender(title, top_n).to_dict(orient='records')
-    return jsonify(results)
+    
+    # Aggiungi informazioni sul film originale
+    response = {
+        "original_movie": {
+            "title": title
+        },
+        "recommendations": results
+    }
+    
+    return jsonify(response)
 
-@app.route('/recommend/item', methods=['POST']) # Funziona
+@app.route('/recommend/item', methods=['POST'])
 def item_recommendations():
     data = request.get_json()
     movie_id = data.get('movie_id', 0)
     top_n = data.get('top_n', 10)
+    
+    # Ottieni i dettagli del film originale
+    original_movie = app_instance.show_movie_details(movie_id)
+    
+    # Ottieni le raccomandazioni
     df = app_instance.run_collaborative_item_recommender(movie_id, top_n)
     df = df.reset_index()
     df.rename(columns={'movieId': 'id'}, inplace=True)
     results = df.to_dict(orient='records')
-    print(results)
-    return jsonify(results)
+    
+    # Crea la risposta con il film originale e le raccomandazioni
+    response = {
+        "original_movie": {
+            "id": movie_id,
+            "title": original_movie.get('title', 'Unknown')
+        },
+        "recommendations": results
+    }
+    
+    return jsonify(response)
 
-@app.route('/recommend/user', methods=['POST']) # Funziona
+@app.route('/recommend/user', methods=['POST'])
 def user_recommendations():
     data = request.get_json()
     user_id = data.get('user_id', 0)
@@ -177,7 +200,7 @@ def user_recommendations():
     results = df.to_dict(orient='records')
     return jsonify(results)
 
-@app.route('/recommend/director/movie', methods=['POST']) # Non Funziona
+@app.route('/recommend/director/movie', methods=['POST']) 
 def director_recommendations_movie():
     data = request.get_json()
     movie_id = data.get('movie_id', 0)
@@ -185,7 +208,7 @@ def director_recommendations_movie():
     results = app_instance.run_director_recommender_by_movie(movie_id, max_actors)
     return jsonify({'result': results})
 
-@app.route('/recommend/director/name', methods=['POST']) # Non Funziona
+@app.route('/recommend/director/name', methods=['POST'])
 def director_recommendations_name():
     data = request.get_json()
     director = data.get('director', '')

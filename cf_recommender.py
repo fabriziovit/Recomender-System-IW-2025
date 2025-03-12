@@ -61,7 +61,7 @@ class CollaborativeRecommender:
         movie_features = self._transposed_matrix.loc[movie_id].values.reshape(1, -1)
 
         # 2. Trova i film più simili usando il modello NearestNeighbors
-        distances, pos_indexes = self.model_item.kneighbors(movie_features)
+        distances, pos_indexes = self.model_item.kneighbors(movie_features, n_neighbors=11)
 
         # Ricava gli ID dei film simili utilizzando gli indici posizionali
         similar_movies_list = [all_movie_ids[pos_idx] for pos_idx in pos_indexes.squeeze().tolist()[1:]]

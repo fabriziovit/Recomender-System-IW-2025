@@ -211,56 +211,77 @@ def get_directed_films_with_actors(director_name):
         print(f"Errore durante la query DBpedia: {e}")
         return []
 
-def recommend_films_with_actors(director_name, max_actors=5, title=None, movie_title_selected = False):
+def recommend_films_with_actors(director_name, max_actors=5, title=None, movie_title_selected=False):
     """
-    Stampa una lista formattata di film raccomandati con attori.
+    Restituisce una struttura dati di film raccomandati con attori.
     
     Args:
         director_name (str): Il nome del regista
         max_actors (int): Numero massimo di attori da mostrare per film
-    """
-    print(f"\nFilm diretti da {director_name} con gli attori principali (max {max_actors}):\n")
-    print("-" * 80)
+        title (str, optional): Titolo del film da escludere
+        movie_title_selected (bool): Se True, esclude il film con titolo corrispondente
     
+    Returns:
+        dict: Un dizionario contenente la lista dei film raccomandati e informazioni sul regista
+    """
     films = get_directed_films_with_actors(director_name)
     
     if not films:
-        print(f"Nessun film trovato per {director_name} o si è verificato un errore.")
-        return
+        return {
+            "success": False,
+            "message": f"Nessun film trovato per {director_name} o si è verificato un errore.",
+            "director": director_name,
+            "total_films": 0,
+            "films": []
+        }
     
+    recommended_films = []
     max_film = 6
     index = 1
-    title = normalize_string(title)
+    
+    if title:
+        title = normalize_string(title)
+    
     for i, film in enumerate(films, 1):
-        if(i < max_film):
-            if(movie_title_selected):
+        if i < max_film:
+            if movie_title_selected:
                 title_query = normalize_string(film["titolo"])
-                if(compare_strings(title, title_query)):
-                    max_film+=1
+                if compare_strings(title, title_query):
+                    max_film += 1
                     continue
-            anno = film["anno"]
-            print(f"{index}. {film['titolo']} ({anno})")
-            index += 1
             
-            # Stampiamo gli attori se disponibili
+            film_data = {
+                "id": index,
+                "title": film['titolo'],
+                "year": film["anno"],
+                "actors": []
+            }
+            
+            # Aggiungiamo gli attori se disponibili
             if film["attori"]:
-                print("   Attori principali:")
-                # Limitiamo a massimo 5 attori per film come richiesto
-                for actor in film["attori"][:max_actors]:
-                    print(f"   - {actor}")
+                # Limitiamo a massimo max_actors attori per film
+                actors_to_show = film["attori"][:max_actors]
+                for actor in actors_to_show:
+                    film_data["actors"].append(actor)
                 
-                # Indichiamo se ci sono più attori
-                if len(film["attori"]) > max_actors:
-                    print(f"   ... e altri {len(film['attori']) - max_actors} attori")
-            else:
-                print("   Attori: Informazione non disponibile")
+                # Aggiungiamo informazioni sugli attori rimanenti
+                film_data["additional_actors_count"] = max(0, len(film["attori"]) - max_actors)
             
-            print()  # Linea vuota tra i film
+            recommended_films.append(film_data)
+            index += 1
         else:
             break
-        
-    print("-" * 80)
-    print(f"Totale film trovati: {len(films)}")
+    
+    result = {
+        "success": True,
+        "director": director_name,
+        "max_actors_shown": max_actors,
+        "total_films_found": len(films),
+        "films_shown": len(recommended_films),
+        "films": recommended_films
+    }
+    
+    return result
 
 def recommend_by_movie_id(csv_file, movie_id, max_actors=5, movie_title_selected = False):
     """
@@ -279,4 +300,4 @@ def recommend_by_movie_id(csv_file, movie_id, max_actors=5, movie_title_selected
         return
     
     print(f"Trovato regista: {director} per il film con ID {movie_id}")
-    recommend_films_with_actors(director, max_actors, title, movie_title_selected)
+    return recommend_films_with_actors(director, max_actors, title, movie_title_selected)
