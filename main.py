@@ -340,7 +340,7 @@ class MovieRecommenderApp:
                 movie_id = selected_movie['id']
 
                 max_actors = int(input("Numero massimo di attori da mostrare per film [default: 5]: ") or 5)
-                recommend_by_movie_id(self.movies_with_abstracts_path, movie_id, max_actors=max_actors)
+                recommend_by_movie_id(self.movies_with_abstracts_path, movie_id, max_actors=max_actors, movie_title_selected = True)
             except ValueError as e:
                 print(f"Errore nell'input: {e}")
         
@@ -354,7 +354,7 @@ class MovieRecommenderApp:
                     break
                 
             max_actors = int(input("Numero massimo di attori da mostrare per film [default: 5]: ") or 5)
-            recommend_films_with_actors(director, max_actors=max_actors, title=movie_title)
+            recommend_films_with_actors(director, max_actors=max_actors, title=movie_title, movie_title_selected = False)
             
         else:
             print("Scelta non valida.")
