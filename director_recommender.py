@@ -3,6 +3,73 @@ import csv
 from SPARQLWrapper import SPARQLWrapper, JSON
 from collections import defaultdict
 
+def normalize_string(s):
+    """
+    Normalizza una stringa sostituendo vari caratteri speciali e rimuovendo punteggiatura superflua.
+    """
+    import unicodedata
+    import re
+    
+    # Normalizzazione Unicode (decomposizione seguita da ricomposizione)
+    s = unicodedata.normalize('NFKD', s)
+    
+    # Sostituzione di vari tipi di trattini con un trattino standard
+    trattini = ['-', '–', '—', '−', '‐', '‑', '‒', '–', '—', '―']
+    for trattino in trattini:
+        s = s.replace(trattino, '-')
+    
+    # Sostituzione di vari tipi di apostrofi e virgolette
+    apostrofi = ['\'', ''', ''', '`', '´', '"', '"', '"']
+    for apostrofo in apostrofi:
+        s = s.replace(apostrofo, "'")
+    
+    # Rimozione di spazi multipli
+    s = re.sub(r'\s+', ' ', s)
+    
+    # Rimozione di spazi attorno ai trattini
+    s = re.sub(r'\s*-\s*', '-', s)
+    
+    # Conversione a minuscolo (opzionale, attivare se necessario)
+    # s = s.lower()
+    
+    # Rimozione di punteggiatura superflua (opzionale, attivare se necessario)
+    # s = re.sub(r'[^\w\s-]', '', s)
+    
+    # Rimozione di spazi iniziali e finali
+    s = s.strip()
+    
+    return s
+
+def compare_strings(str1, str2, case_sensitive=True, ignore_punctuation=False):
+    """
+    Confronta due stringhe dopo normalizzazione.
+    
+    Args:
+        str1, str2: Le stringhe da confrontare
+        case_sensitive: Se False, ignora differenze tra maiuscole e minuscole
+        ignore_punctuation: Se True, rimuove tutta la punteggiatura prima del confronto
+    
+    Returns:
+        bool: True se le stringhe sono considerate uguali dopo la normalizzazione
+    """
+    import re
+    
+    # Normalizzazione di base
+    norm1 = normalize_string(str1)
+    norm2 = normalize_string(str2)
+    
+    # Opzioni aggiuntive
+    if not case_sensitive:
+        norm1 = norm1.lower()
+        norm2 = norm2.lower()
+    
+    if ignore_punctuation:
+        norm1 = re.sub(r'[^\w\s]', '', norm1)
+        norm2 = re.sub(r'[^\w\s]', '', norm2)
+    
+    # Confronto finale
+    return norm1 == norm2
+
 def get_director_by_movie_id(csv_file, movie_id):
     """
     Ottiene il regista di un film dal file CSV dato il movieId.
@@ -103,7 +170,7 @@ def get_directed_films_with_actors(director_name):
       OPTIONAL {{ ?film dbo:starring ?actor . ?actor rdfs:label ?actorName . FILTER(LANG(?actorName) = "en") }}
     }}
     ORDER BY ?titolo
-    LIMIT 30
+    LIMIT 100
     """
     
     sparql.setQuery(query)
@@ -144,7 +211,7 @@ def get_directed_films_with_actors(director_name):
         print(f"Errore durante la query DBpedia: {e}")
         return []
 
-def recommend_films_with_actors(director_name, max_actors=5, title=None):
+def recommend_films_with_actors(director_name, max_actors=5, title=None, movie_title_selected = False):
     """
     Stampa una lista formattata di film raccomandati con attori.
     
@@ -163,11 +230,14 @@ def recommend_films_with_actors(director_name, max_actors=5, title=None):
     
     max_film = 6
     index = 1
+    title = normalize_string(title)
     for i, film in enumerate(films, 1):
         if(i < max_film):
-            if(title == film["titolo"]):
-                max_film+=1
-                continue
+            if(movie_title_selected):
+                title_query = normalize_string(film["titolo"])
+                if(compare_strings(title, title_query)):
+                    max_film+=1
+                    continue
             anno = film["anno"]
             print(f"{index}. {film['titolo']} ({anno})")
             index += 1
@@ -192,7 +262,7 @@ def recommend_films_with_actors(director_name, max_actors=5, title=None):
     print("-" * 80)
     print(f"Totale film trovati: {len(films)}")
 
-def recommend_by_movie_id(csv_file, movie_id, max_actors=5):
+def recommend_by_movie_id(csv_file, movie_id, max_actors=5, movie_title_selected = False):
     """
     Dato un movieId, trova il regista nel CSV e mostra raccomandazioni di altri suoi film.
     
@@ -209,21 +279,4 @@ def recommend_by_movie_id(csv_file, movie_id, max_actors=5):
         return
     
     print(f"Trovato regista: {director} per il film con ID {movie_id}")
-    recommend_films_with_actors(director, max_actors, title)
-
-# Esempio di utilizzo
-if __name__ == "__main__":
-    csv_file = "Datasets_dbpedia/movies_with_abstracts_complete.csv"
-    
-    try:
-        movie_id = int(input("Inserisci l'ID del film (movieId): "))
-        recommend_by_movie_id(csv_file, movie_id)
-    except ValueError:
-        print("L'ID del film deve essere un numero.")
-        # Fallback al comportamento originale
-        director = input("Inserisci il nome di un regista (o premi invio per usare Christopher Nolan): ")
-        
-        if not director:
-            director = "Christopher Nolan"
-        
-        recommend_films_with_actors(director, max_actors=5)
+    recommend_films_with_actors(director, max_actors, title, movie_title_selected)
