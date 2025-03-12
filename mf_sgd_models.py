@@ -5,7 +5,7 @@ import datetime
 import numpy as np
 import pandas as pd
 from eval import compute_mae_rmse
-from done.utils import load_movielens_data, get_train_valid_test_matrix
+from utils import load_movielens_data, get_train_valid_test_matrix
 
 # pd.set_option("display.max_rows", None)  # Non limitare il numero di righe
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -275,7 +275,7 @@ def eval():
 
     # Parametri Modello
     n_epochs: int = 3000
-    num_factors_list: list = [400]  #  [10, 20, 30, 50]  # Test con diversi numeri di fattori latenti
+    num_factors_list: list = [500]  #  [10, 20, 30, 50]  # Test con diversi numeri di fattori latenti
     learning_rate_list: list = [0.001]  #! [0.001]  # Test con diversi learning rates
     # lambda_list: list = [0.001, 0.0001, 0.00001]  # Test con diversi valori di lambda (weight decay)
     lambda_list: list = [1.0, 0.0, 0.1, 0.01, 0.001, 0.0001, 0.00001]  #! Test con diversi valori di lambda (weight decay)

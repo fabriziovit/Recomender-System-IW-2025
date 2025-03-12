@@ -20,7 +20,7 @@ def pearson_distance(x, y, flag: bool = False):
     return 1 - np.abs(corr)  # Restituisci la distanza, che è 1 - |correlazione|
 
 
-def get_hold_out_random(df_ratings: pd.DataFrame, valid_size=0.15, test_size=0.15, random_state=42):
+def hold_out_random(df_ratings: pd.DataFrame, valid_size=0.15, test_size=0.15, random_state=42) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     # 1. Splitto in training e test
     train_ratings_df, val_test_ratings_df = train_test_split(df_ratings, test_size=valid_size + test_size, random_state=42)
     # 2. Splitto il training in training e validation
@@ -32,7 +32,7 @@ def get_hold_out_random(df_ratings: pd.DataFrame, valid_size=0.15, test_size=0.1
 def get_train_valid_test_matrix(df_ratings: pd.DataFrame, all_movies_id: pd.Index, all_user_ids: pd.Index):
 
     # 1. Split dei dati in training, validation e test da ratings
-    df_train_ratings, df_valid_ratings, df_test_ratings = get_hold_out_random(df_ratings)
+    df_train_ratings, df_valid_ratings, df_test_ratings = hold_out_random(df_ratings)
 
     train_matrix: pd.DataFrame = df_train_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
     valid_matrix: pd.DataFrame = df_valid_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)

@@ -3,7 +3,7 @@ from sklearn.decomposition import TruncatedSVD
 import pandas as pd
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-from done.utils import load_movielens_data, hold_out_random, pearson_distance
+from utils import load_movielens_data, hold_out_random, pearson_distance
 
 
 def precompute_user_means(users_x_movie: pd.DataFrame) -> dict:
@@ -138,7 +138,9 @@ class CF_SVD_DimensionalityReduction_UserBased:
         return pd.DataFrame(values, index=res_movies_ids, columns=["values"]).sort_values(by="values", ascending=False)
 
 
-def precompute_all_predictions(recomm: CF_SVD_DimensionalityReduction_UserBased, train_ratings_matrix: pd.DataFrame, utility_matrix: pd.DataFrame, common_users: set, user_means: dict) -> dict:
+def precompute_all_predictions(
+    recomm: CF_SVD_DimensionalityReduction_UserBased, train_ratings_matrix: pd.DataFrame, utility_matrix: pd.DataFrame, common_users: set, user_means: dict
+) -> dict:
     """
     Calcola e salva le predizioni per tutti gli utenti in common_users.
     Restituisce un dizionario: {user_id: predictions_df}
@@ -149,7 +151,9 @@ def precompute_all_predictions(recomm: CF_SVD_DimensionalityReduction_UserBased,
     return all_user_predictions
 
 
-def evaluate_user_based(recomm: CF_SVD_DimensionalityReduction_UserBased, train_ratings_matrix, test_ratings_matrix, K_list, NN, relevant_value, n_comp, n_iter, precomputed_predictions: dict) -> dict:
+def evaluate_user_based(
+    recomm: CF_SVD_DimensionalityReduction_UserBased, train_ratings_matrix, test_ratings_matrix, K_list, NN, relevant_value, n_comp, n_iter, precomputed_predictions: dict
+) -> dict:
     """
     Valuta il recommender user-based utilizzando Precision@K e Recall@K per ciascun valore di K in K_list.
     """

@@ -4,28 +4,6 @@ from sklearn.neighbors import NearestNeighbors
 from utils import load_movielens_data, pearson_distance
 
 
-def get_ratings_mean(similiars_x_movie_s: pd.Series, dist_s: pd.Series) -> float:
-    """
-    Calcola la media pesata ignorando rating mancanti (0.0) in maniera vettoriale.
-    """
-    # Converti i rating dei simili e le similarità in array NumPy
-    ratings_vec = similiars_x_movie_s.to_numpy()
-    sim_uv_vec = np.maximum(0, 1 - dist_s.to_numpy())
-
-    # Identifica gli indici dei rating non nulli
-    non_zero_mask = ratings_vec != 0
-
-    # Applica il filtro ai rating e alle similarità
-    filtered_ratings_vec = ratings_vec[non_zero_mask]
-    filtered_sim_uv_vec = sim_uv_vec[non_zero_mask]
-
-    # Calcola numeratore e denominatore solo per i rating non nulli
-    numeratore = np.dot(filtered_sim_uv_vec, filtered_ratings_vec)
-    denominatore = np.sum(np.abs(filtered_sim_uv_vec))
-
-    return numeratore / denominatore if denominatore != 0 else 0
-
-
 class CollaborativeRecommender:
 
     def __init__(self, model_item: NearestNeighbors, model_user: NearestNeighbors):
