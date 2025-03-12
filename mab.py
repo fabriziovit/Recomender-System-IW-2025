@@ -1,11 +1,14 @@
 import numpy as np
 from abc import ABC, abstractmethod
 
+
 class MAB(ABC):
-    """Base class for a contextual multi-armed bandit (MAB)
-        :param n_arms: Numero di bracci
-        :param n_dims: Numero di dimensioni del contesto (solo per bandit contestuali)
     """
+    Base class for a contextual Multi-Armed Bandit (MAB)
+    n_arms: Numero di bracci
+    n_dims: Numero di dimensioni del contesto (solo per bandit contestuali)
+    """
+
     def __init__(self, n_arms, n_dims):
         if not isinstance(n_arms, int):
             raise TypeError("n_arms must be an integer")
@@ -18,34 +21,34 @@ class MAB(ABC):
         self._n_arms = n_arms
         self._n_dims = n_dims
 
-    @abstractmethod
-    def play(self, context):
-        """
-        Deve restituire un braccio (arm) da selezionare.
-            :param  context : [float numpy.ndarray, shape (n_arms, n_dims), optional]
-             NOTE: Non-contextual bandits accept a context of None.
-        """
+    def _validate_context(self, context) -> np.ndarray:
         if context is not None:
             if not isinstance(context, np.ndarray):
                 raise TypeError("context must be numpy.ndarray")
             if context.shape != (self._n_arms, self._n_dims):
                 raise TypeError(f"context must have shape ({self._n_arms}, {self._n_dims})")
-            self._context = context
+        return context
+
+    def _validate_arm(self, arm: int) -> int:
+        if not isinstance(arm, (int, np.integer)):
+            raise TypeError("arm must be an integer")
+        if arm < 0 or arm >= self._n_arms:
+            raise ValueError("arm must be between 0 and n_arms-1")
+        return arm
+
+    def _validate_reward(self, reward: float) -> float:
+        if not isinstance(reward, (int, (float, np.floating))):
+            raise TypeError("reward must be a number")
+        return float(reward)
+
+    @abstractmethod
+    def play(self, context):
+        """Deve restituire un braccio (arm) da selezionare."""
+        self._context = self._validate_context(context)
 
     @abstractmethod
     def update(self, arm, reward, context):
-        """
-        Aggiorna il valore del braccio selezionato con la ricompensa ottenuta.
-            :param arm : int index of the played arm in the set {0, ..., n_arms - 1}.
-            :param reward : float [Reward received from the arm.]
-            :param  context : [float numpy.ndarray, shape (n_arms, n_dims), optional]
-             NOTE: Non-contextual bandits accept a context of None.
-        """
-        if context is not None:
-            if not isinstance(context, np.ndarray):
-                raise TypeError("context must be numpy.ndarray")
-            if context.shape != (self._n_arms, self._n_dims):
-                raise TypeError(f"context must have shape ({self._n_arms}, {self._n_dims})")
-        self._arm = arm
-        self._reward = reward
-        self._context = context
+        """Aggiorna il valore del braccio selezionato con la ricompensa ottenuta."""
+        self._arm = self._validate_arm(arm)
+        self._reward = self._validate_reward(reward)
+        self._context = self._validate_context(context)

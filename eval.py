@@ -8,6 +8,7 @@ def compute_mae_rmse(test_matrix: pd.DataFrame, predictions_dict: dict) -> tuple
     squared_errors = []
     for user_id in test_matrix.index:
         df_predictions = predictions_dict[user_id]
+        # Seleziono solo i film per cui l'utente ha un rating espliciti nel test set
         user_movies = test_matrix.columns[test_matrix.loc[user_id] > 0.0]
         for movie_id in user_movies:
             real_rating = test_matrix.loc[user_id, movie_id]

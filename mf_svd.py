@@ -308,10 +308,10 @@ def main():
     for n_components in n_components_list:
         for n_iter in n_iter_list:
             # 5. Modello SVD per la matrix-factorization
-            svd = TruncatedSVD(n_components=n_components, n_iter=n_iter)
-
+            svd = TruncatedSVD(n_components, n_iter)
+            #! Non viene fatta l'imputazione dei rating mancanti
             # 6. Fit del modello SVD on Training
-            factored_matrix = svd.fit_transform(train_matrix)
+            factored_train_matrix = svd.fit_transform(train_matrix)
 
             # Parametri di test
             K_list = [5]
@@ -327,10 +327,10 @@ def main():
             for NN in nn_list:
                 knn_model = NearestNeighbors(n_neighbors=NN + 1, metric=pearson_distance, algorithm="brute", n_jobs=-1)
                 recomm = CF_SVD_DimensionalityReduction_UserBased(knn_model)
-                recomm.fit_user_model(factored_matrix, re_fit=True)
+                recomm.fit_user_model(factored_train_matrix, re_fit=True)
 
                 # Precomputo le predizioni per tutti gli utenti comuni
-                precomputed_predictions = precompute_all_predictions(recomm, factored_matrix, train_matrix, common_users, user_means)
+                precomputed_predictions = precompute_all_predictions(recomm, factored_train_matrix, train_matrix, common_users, user_means)
 
                 results_acc_rec = evaluate_user_based(recomm, train_matrix, test_matrix, K_list, NN, relevant_value, n_components, n_iter, precomputed_predictions)
                 results_mae_rmse = calculate_mae_rmse(test_matrix, train_matrix, K_list, NN, n_components, n_iter, precomputed_predictions)
