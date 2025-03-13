@@ -110,7 +110,6 @@ class MovieRecommenderApp:
         return self.content_recommender.recommend(movie_title, top_n=top_n)
     
     def run_content_item_recommender_mab(self, movie_title: str, top_n: int = 10) -> pd.DataFrame:
-        print(top_n)
         return simulate_on_cb_recomm(movie_title, self.df_ratings, 20)[:top_n]
 
     def run_collaborative_item_recommender(self, movie_id: int, top_n: int = 10) -> pd.DataFrame:
