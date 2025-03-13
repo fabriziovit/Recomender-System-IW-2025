@@ -21,7 +21,9 @@ class CollaborativeRecommender:
 
         self._transposed_matrix = None
         self._is_fitted_on_matrix_T_item = False
+        self._dist_item: pd.Series = None
         self._is_fitted_on_matrix_user = False
+        self._dist_user: pd.Series = None
 
     def fit_item_model(self, matrix: pd.DataFrame, re_fit: bool = False) -> None:
         """
@@ -46,7 +48,7 @@ class CollaborativeRecommender:
         else:
             print("# Modello model_user già addestrato su matrix (users x movies): Salto l'addestramento.")
 
-    def get_item_recommendations(self, movie_id: int, matrix: pd.DataFrame, df_movies: pd.DataFrame) -> pd.DataFrame:
+    def get_item_recommendations(self, movie_id: int, df_movies: pd.DataFrame) -> pd.DataFrame:
         """
         Raccomanda film simili a un film dato utilizzando il filtraggio collaborativo item-based.
         """
@@ -61,13 +63,15 @@ class CollaborativeRecommender:
         movie_features = self._transposed_matrix.loc[movie_id].values.reshape(1, -1)
 
         # 2. Trova i film più simili usando il modello NearestNeighbors
-        distances, pos_indexes = self.model_item.kneighbors(movie_features, n_neighbors=11)
+        distances, pos_indexes = self.model_item.kneighbors(movie_features)
 
         # Ricava gli ID dei film simili utilizzando gli indici posizionali
         similar_movies_list = [all_movie_ids[pos_idx] for pos_idx in pos_indexes.squeeze().tolist()[1:]]
-        dist = pd.Series(distances.squeeze().tolist()[1:], index=similar_movies_list)
 
-        print(f"Film simili trovati per il film: {df_movies.loc[movie_id, 'title']} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in dist.items()]}")
+        # Salva le distanze item-item per il film specificato
+        self._dist_item = pd.Series(distances.squeeze().tolist()[1:], index=similar_movies_list)
+
+        print(f"Film simili trovati per il film: {df_movies.loc[movie_id, 'title']} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self._dist_item.items()]}")
 
         # Crea un DataFrame con le raccomandazioni dei film
         return df_movies.loc[similar_movies_list]
@@ -89,8 +93,11 @@ class CollaborativeRecommender:
 
         # 3. Ricava gli ID degli utenti simili utilizzando gli indici posizionali
         similar_users = [all_users[pos_idx] for pos_idx in pos_indexes.squeeze().tolist()[1:]]
-        dist = pd.Series(distances.squeeze().tolist()[1:], index=similar_users)
-        print(f"#Utenti simili per user {user_id}: {similar_users} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in dist.items()]}")
+
+        # Salava le distanze user-user per l'utente specificato
+        self._dist_user = pd.Series(distances.squeeze().tolist()[1:], index=similar_users)
+
+        print(f"#Utenti simili per user {user_id}: {similar_users} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self._dist_user.items()]}")
 
         # 4. Recupera i film già visti dall'utente target
         seen_mask = matrix.loc[user_id] > 0.0
@@ -103,7 +110,7 @@ class CollaborativeRecommender:
         similars_df = similars_df.loc[:, ~similars_df.columns.isin(seen_movies)]
 
         # 6. Calcola la media pesata per colonne e ordina i risultati in ordine decrescente
-        mean_weighted_vec = matrix.loc[similar_users].apply(lambda x: np.average(x, weights=1 - dist.to_numpy()))
+        mean_weighted_vec = matrix.loc[similar_users].apply(lambda x: np.average(x, weights=1 - self._dist_user.to_numpy()))
         mean_movies_df = mean_weighted_vec.to_frame(name="values").sort_values(by="values", ascending=False)
         return mean_movies_df.merge(df_movies, how="left", on="movieId")
 
