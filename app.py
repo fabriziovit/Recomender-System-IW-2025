@@ -6,6 +6,7 @@ import os
 from cb_recommender import ContentBasedRecommender
 from cf_recommender import CollaborativeRecommender
 from sklearn.neighbors import NearestNeighbors
+from test_mab import simulate_on_cb_recomm
 from utils import load_movielens_data, pearson_distance
 from director_recommender import recommend_by_movie_id, recommend_films_with_actors
 from fuzzywuzzy import process
@@ -19,6 +20,7 @@ class MovieRecommenderApp:
         self.df_movies = None
         self.df_ratings = None
         self.df_tags = None
+        self.df_with_abstracts = None
         self.content_recommender = None
         self.collaborative_recommender = None
         self.utility_matrix = None
@@ -33,11 +35,12 @@ class MovieRecommenderApp:
             self.df_movies, self.df_ratings, self.df_tags = load_movielens_data(self.data_dir)
             self
             self.utility_matrix = self.df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
+            self.df_with_abstracts = pd.read_csv(self.movies_with_abstracts_path, dtype={'imdbId': str, 'tmdbId': str})
         except Exception as e:
             print(f"Errore nel caricamento dei dati base: {e}")
 
     def movie_finder(self, title):
-        all_titles = self.df_movies['title'].tolist()
+        all_titles = self.df_with_abstracts['title'].tolist()
         closest_match = process.extractOne(title, all_titles)
         return closest_match[0]
 
@@ -45,8 +48,7 @@ class MovieRecommenderApp:
         if self.content_initialized:
             return
         try:
-            df_with_abstracts = pd.read_csv(self.movies_with_abstracts_path)
-            self.content_recommender = ContentBasedRecommender(df_with_abstracts)
+            self.content_recommender = ContentBasedRecommender(self.df_with_abstracts)
             self.content_initialized = True
         except Exception as e:
             print(f"Errore nell'inizializzazione del content recommender: {e}")
@@ -73,19 +75,19 @@ class MovieRecommenderApp:
             return False
 
     def search_movie_by_title(self, query: str) -> list:
-        if self.df_movies is None:
+        if self.df_with_abstracts is None:
             return []
-        results = self.df_movies[self.df_movies['title'].str.contains(query, case=False)]
+        results = self.df_with_abstracts[self.df_with_abstracts['title'].str.contains(query, case=False)]
         movies_list = []
         for _, row in results.iterrows():
-            movies_list.append({'id': row.name, 'title': row['title'], 'genres': row['genres']})
+            movies_list.append(row)
         return movies_list
 
     def show_movie_details(self, movie_id: int) -> dict:
-        if self.df_movies is None:
+        if self.df_with_abstracts is None:
             return {}
         try:
-            movie = self.df_movies.loc[movie_id].to_dict()
+            movie = self.df_with_abstracts[self.df_with_abstracts['movieId'] == movie_id].iloc[0].to_dict()
             if self.df_ratings is not None:
                 ratings = self.df_ratings[self.df_ratings['movieId'] == movie_id]
                 if len(ratings) > 0:
@@ -94,6 +96,8 @@ class MovieRecommenderApp:
                     movie['avg_rating'] = avg_rating
                     movie['num_ratings'] = num_ratings
                     movie['id'] = movie_id
+                    movie['dbpedia_abstract'] = movie['dbpedia_abstract'][:200] + "..." if len(movie['dbpedia_abstract']) > 200 else movie['dbpedia_abstract']
+                    movie['dbpedia_director'] = movie['dbpedia_director'][:200] + "..." if len(movie['dbpedia_director']) > 200 else movie['dbpedia_director']
             return movie
         except (IndexError, KeyError):
             return {}
@@ -104,6 +108,10 @@ class MovieRecommenderApp:
             if not self.content_initialized:
                 return pd.DataFrame()
         return self.content_recommender.recommend(movie_title, top_n=top_n)
+    
+    def run_content_item_recommender_mab(self, movie_title: str, top_n: int = 10) -> pd.DataFrame:
+        print(top_n)
+        return simulate_on_cb_recomm(movie_title, self.df_ratings, 20)[:top_n]
 
     def run_collaborative_item_recommender(self, movie_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.collaborative_initialized:
@@ -137,6 +145,8 @@ def search_movies():
     query = data.get('query', '')
     #title = app_instance.movie_finder(query)
     results = app_instance.search_movie_by_title(query)
+    print(results)
+    results = [result.to_dict() for result in results]
     return jsonify(results)
 
 @app.route('/movie/<int:movie_id>', methods=['GET'])
@@ -163,6 +173,26 @@ def content_recommendations():
     
     return jsonify(response)
 
+@app.route('/recommend/content_mab', methods=['POST'])
+def content_recommendations_mab():
+    data = request.get_json()
+    query = data.get('query', '')
+    title = app_instance.movie_finder(query)
+    top_n = data.get('top_n', 10)
+    results_ids = app_instance.run_content_item_recommender_mab(title)
+    print(results_ids)
+    results = app_instance.df_with_abstracts[app_instance.df_with_abstracts['movieId'].isin(results_ids)].to_dict(orient='records')
+    
+    # Aggiungi informazioni sul film originale
+    response = {
+        "original_movie": {
+            "title": title
+        },
+        "recommendations": results
+    }
+    
+    return jsonify(response)
+
 @app.route('/recommend/item', methods=['POST'])
 def item_recommendations():
     data = request.get_json()
@@ -175,8 +205,9 @@ def item_recommendations():
     # Ottieni le raccomandazioni
     df = app_instance.run_collaborative_item_recommender(movie_id, top_n)
     df = df.reset_index()
-    df.rename(columns={'movieId': 'id'}, inplace=True)
-    results = df.to_dict(orient='records')
+    df_results = df.merge(app_instance.df_with_abstracts, on='movieId', suffixes=('', '_drop'))
+    df_results = df_results.loc[:, ~df_results.columns.str.contains('_drop')]
+    results = df_results.to_dict(orient='records')
     
     # Crea la risposta con il film originale e le raccomandazioni
     response = {
@@ -196,8 +227,10 @@ def user_recommendations():
     top_n = data.get('top_n', 10)
     df = app_instance.run_collaborative_user_recommender(user_id, top_n)
     df = df.reset_index()
-    df.rename(columns={'movieId': 'id'}, inplace=True)
-    results = df.to_dict(orient='records')
+    df_results = df.merge(app_instance.df_with_abstracts, on='movieId', suffixes=('', '_drop'))
+    df_results = df_results.loc[:, ~df_results.columns.str.contains('_drop')]
+    df_results = df_results.drop(columns=['values'])
+    results = df_results.to_dict(orient='records')
     return jsonify(results)
 
 @app.route('/recommend/director/movie', methods=['POST']) 
