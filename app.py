@@ -75,7 +75,7 @@ class MovieRecommenderApp:
     def search_movie_by_title(self, query: str) -> list:
         if self.df_movies is None:
             return []
-        results = self.df_movies[self.df_movies['title'] == query]
+        results = self.df_movies[self.df_movies['title'].str.contains(query, case=False)]
         movies_list = []
         for _, row in results.iterrows():
             movies_list.append({'id': row.name, 'title': row['title'], 'genres': row['genres']})
@@ -135,8 +135,8 @@ app_instance = MovieRecommenderApp()
 def search_movies():
     data = request.get_json()
     query = data.get('query', '')
-    title = app_instance.movie_finder(query)
-    results = app_instance.search_movie_by_title(title)
+    #title = app_instance.movie_finder(query)
+    results = app_instance.search_movie_by_title(query)
     return jsonify(results)
 
 @app.route('/movie/<int:movie_id>', methods=['GET'])
