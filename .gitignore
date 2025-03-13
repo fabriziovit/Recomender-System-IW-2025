@@ -8,3 +8,7 @@ temp_res.txt
 main_mab1.py
 main_mab2.py
 __pycache__/
+pycache/
+*.pyc
+*.pyo
+*.pyd

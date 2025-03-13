@@ -151,6 +151,28 @@
         color: var(--secondary-color);
       }
 
+      /* Category titles styling */
+      .category-title {
+        text-align: center;
+        margin: 2rem 0 1rem 0;
+        font-size: 1.8rem;
+        color: var(--primary-color);
+        position: relative;
+        font-weight: 600;
+      }
+
+      .category-title::after {
+        content: '';
+        display: block;
+        width: 100px;
+        height: 3px;
+        margin: 0.5rem auto;
+      }
+
+      .category-container {
+        margin-bottom: 3rem;
+      }
+
       .input-group {
         margin-bottom: 1rem;
       }
@@ -652,137 +674,167 @@
         <p>Discover your next favorite movie</p>
       </div>
 
-      <div class="sections-container">
-        <div class="section">
-          <h2><i class="fas fa-search"></i> Search Movie</h2>
-          <div class="input-group">
-            <input
-              type="text"
-              id="searchQuery"
-              placeholder="Enter movie title"
-            />
+      <!-- Search and Details Category -->
+      <div class="category-container">
+        <h2 class="category-title">
+          <i class="fas fa-search"></i> Movie Search & Information
+        </h2>
+        <div class="sections-container">
+          <div class="section">
+            <h2><i class="fas fa-search"></i> Search Movie</h2>
+            <div class="input-group">
+              <input
+                type="text"
+                id="searchQuery"
+                placeholder="Enter movie title"
+              />
+            </div>
+            <button onclick="searchMovies()">
+              <i class="fas fa-search"></i> Search
+            </button>
+            <div id="searchLoading" class="loading">
+              <i class="fas fa-spinner"></i>
+            </div>
+            <div id="searchResults" class="results"></div>
           </div>
-          <button onclick="searchMovies()">
-            <i class="fas fa-search"></i> Search
-          </button>
-          <div id="searchLoading" class="loading">
-            <i class="fas fa-spinner"></i>
-          </div>
-          <div id="searchResults" class="results"></div>
-        </div>
 
-        <div class="section">
-          <h2><i class="fas fa-info-circle"></i> Movie Details</h2>
-          <div class="input-group">
-            <input type="number" id="movieId" placeholder="Enter movie ID" />
+          <div class="section">
+            <h2><i class="fas fa-info-circle"></i> Movie Details</h2>
+            <div class="input-group">
+              <input type="number" id="movieId" placeholder="Enter movie ID" />
+            </div>
+            <button onclick="getMovieDetails()">
+              <i class="fas fa-info-circle"></i> Get Details
+            </button>
+            <div id="movieDetailsLoading" class="loading">
+              <i class="fas fa-spinner"></i>
+            </div>
+            <div id="movieDetails" class="results"></div>
           </div>
-          <button onclick="getMovieDetails()">
-            <i class="fas fa-info-circle"></i> Get Details
-          </button>
-          <div id="movieDetailsLoading" class="loading">
-            <i class="fas fa-spinner"></i>
-          </div>
-          <div id="movieDetails" class="results"></div>
         </div>
+      </div>
 
-        <div class="section">
-          <h2><i class="fas fa-tags"></i> Content-Based</h2>
-          <div class="input-group">
-            <input
-              type="text"
-              id="contentTitle"
-              placeholder="Enter movie title"
-            />
+      <!-- Content-Based Recommendations Category -->
+      <div class="category-container">
+        <h2 class="category-title">
+          <i class="fas fa-tags"></i> Content-Based Recommendations
+        </h2>
+        <div class="sections-container">
+          <div class="section">
+            <h2><i class="fas fa-tags"></i> Content-Based</h2>
+            <div class="input-group">
+              <input
+                type="text"
+                id="contentTitle"
+                placeholder="Enter movie title"
+              />
+            </div>
+            <button onclick="getContentRecommendations()">
+              <i class="fas fa-lightbulb"></i> Get Recommendations
+            </button>
+            <div id="contentLoading" class="loading">
+              <i class="fas fa-spinner"></i>
+            </div>
+            <div id="contentResults" class="results"></div>
           </div>
-          <button onclick="getContentRecommendations()">
-            <i class="fas fa-lightbulb"></i> Get Recommendations
-          </button>
-          <div id="contentLoading" class="loading">
-            <i class="fas fa-spinner"></i>
+
+          <div class="section">
+            <h2><i class="fas fa-tags"></i> Content-Based with MAB</h2>
+            <div class="input-group">
+              <input
+                type="text"
+                id="contentTitleMab"
+                placeholder="Enter movie title"
+              />
+            </div>
+            <button onclick="getContentRecommendationsWithMab()">
+              <i class="fas fa-lightbulb"></i> Get Recommendations
+            </button>
+            <div id="contentMabLoading" class="loading">
+              <i class="fas fa-spinner"></i>
+            </div>
+            <div id="contentMabResults" class="results"></div>
           </div>
-          <div id="contentResults" class="results"></div>
         </div>
+      </div>
 
-        <div class="section">
-          <h2><i class="fas fa-tags"></i> Content-Based with MAB</h2>
-          <div class="input-group">
-            <input
-              type="text"
-              id="contentTitleMab"
-              placeholder="Enter movie title"
-            />
+      <!-- Collaborative Filtering Category -->
+      <div class="category-container">
+        <h2 class="category-title">
+          <i class="fas fa-users"></i> Collaborative Filtering
+        </h2>
+        <div class="sections-container">
+          <div class="section">
+            <h2><i class="fas fa-film"></i> Item-Based</h2>
+            <div class="input-group">
+              <input type="number" id="itemId" placeholder="Enter movie ID" />
+            </div>
+            <button onclick="getItemRecommendations()">
+              <i class="fas fa-lightbulb"></i> Get Recommendations
+            </button>
+            <div id="itemLoading" class="loading">
+              <i class="fas fa-spinner"></i>
+            </div>
+            <div id="itemResults" class="results"></div>
           </div>
-          <button onclick="getContentRecommendationsWithMab()">
-            <i class="fas fa-lightbulb"></i> Get Recommendations
-          </button>
-          <div id="contentMabLoading" class="loading">
-            <i class="fas fa-spinner"></i>
+
+          <div class="section">
+            <h2><i class="fas fa-user"></i> User-Based</h2>
+            <div class="input-group">
+              <input type="number" id="userId" placeholder="Enter user ID" />
+            </div>
+            <button onclick="getUserRecommendations()">
+              <i class="fas fa-lightbulb"></i> Get Recommendations
+            </button>
+            <div id="userLoading" class="loading">
+              <i class="fas fa-spinner"></i>
+            </div>
+            <div id="userResults" class="results"></div>
           </div>
-          <div id="contentMabResults" class="results"></div>
         </div>
+      </div>
 
-        <div class="section">
-          <h2><i class="fas fa-film"></i> Item-Based</h2>
-          <div class="input-group">
-            <input type="number" id="itemId" placeholder="Enter movie ID" />
+      <!-- DBpedia Recommendations Category -->
+      <div class="category-container">
+        <h2 class="category-title">
+          <i class="fas fa-database"></i> Recommendations by DBpedia
+        </h2>
+        <div class="sections-container">
+          <div class="section">
+            <h2><i class="fas fa-video"></i> By Director (Movie)</h2>
+            <div class="input-group">
+              <input
+                type="number"
+                id="directorMovieId"
+                placeholder="Enter movie ID"
+              />
+            </div>
+            <button onclick="getDirectorMovieRecommendations()">
+              <i class="fas fa-lightbulb"></i> Get Recommendations
+            </button>
+            <div id="directorMovieLoading" class="loading">
+              <i class="fas fa-spinner"></i>
+            </div>
+            <div id="directorMovieResults" class="results"></div>
           </div>
-          <button onclick="getItemRecommendations()">
-            <i class="fas fa-lightbulb"></i> Get Recommendations
-          </button>
-          <div id="itemLoading" class="loading">
-            <i class="fas fa-spinner"></i>
-          </div>
-          <div id="itemResults" class="results"></div>
-        </div>
 
-        <div class="section">
-          <h2><i class="fas fa-user"></i> User-Based</h2>
-          <div class="input-group">
-            <input type="number" id="userId" placeholder="Enter user ID" />
+          <div class="section">
+            <h2><i class="fas fa-user-tie"></i> By Director (Name)</h2>
+            <div class="input-group">
+              <input
+                type="text"
+                id="directorName"
+                placeholder="Enter director name"
+              />
+            </div>
+            <button onclick="getDirectorNameRecommendations()">
+              <i class="fas fa-lightbulb"></i> Get Recommendations
+            </button>
+            <div id="directorNameLoading" class="loading">
+              <i class="fas fa-spinner"></i>
+            </div>
+            <div id="directorNameResults" class="results"></div>
           </div>
-          <button onclick="getUserRecommendations()">
-            <i class="fas fa-lightbulb"></i> Get Recommendations
-          </button>
-          <div id="userLoading" class="loading">
-            <i class="fas fa-spinner"></i>
-          </div>
-          <div id="userResults" class="results"></div>
-        </div>
-
-        <div class="section">
-          <h2><i class="fas fa-video"></i> By Director (Movie)</h2>
-          <div class="input-group">
-            <input
-              type="number"
-              id="directorMovieId"
-              placeholder="Enter movie ID"
-            />
-          </div>
-          <button onclick="getDirectorMovieRecommendations()">
-            <i class="fas fa-lightbulb"></i> Get Recommendations
-          </button>
-          <div id="directorMovieLoading" class="loading">
-            <i class="fas fa-spinner"></i>
-          </div>
-          <div id="directorMovieResults" class="results"></div>
-        </div>
-
-        <div class="section">
-          <h2><i class="fas fa-user-tie"></i> By Director (Name)</h2>
-          <div class="input-group">
-            <input
-              type="text"
-              id="directorName"
-              placeholder="Enter director name"
-            />
-          </div>
-          <button onclick="getDirectorNameRecommendations()">
-            <i class="fas fa-lightbulb"></i> Get Recommendations
-          </button>
-          <div id="directorNameLoading" class="loading">
-            <i class="fas fa-spinner"></i>
-          </div>
-          <div id="directorNameResults" class="results"></div>
         </div>
       </div>
 
