@@ -1,3 +1,4 @@
+from typing import Optional
 import numpy as np
 from abc import ABC, abstractmethod
 
@@ -9,19 +10,20 @@ class MAB(ABC):
     n_dims: Numero di dimensioni del contesto (solo per bandit contestuali)
     """
 
-    def __init__(self, n_arms, n_dims):
+    def __init__(self, n_arms: int, n_dims: Optional[int] = None):
         if not isinstance(n_arms, int):
             raise TypeError("n_arms must be an integer")
         if n_arms < 0:
             raise ValueError("n_arms must be non-negative")
-        if not isinstance(n_dims, int):
-            raise TypeError("n_dims must be an integer")
-        if n_dims < 0:
-            raise ValueError("n_dims must be non-negative")
+        if n_dims is not None:
+            if not isinstance(n_dims, int):
+                raise TypeError("n_dims must be an integer")
+            if n_dims < 0:
+                raise ValueError("n_dims must be non-negative")
+            self._n_dims = n_dims
         self._n_arms = n_arms
-        self._n_dims = n_dims
 
-    def _validate_context(self, context) -> np.ndarray:
+    def _validate_context(self, context: Optional[np.ndarray] = None) -> Optional[np.ndarray]:
         if context is not None:
             if not isinstance(context, np.ndarray):
                 raise TypeError("context must be numpy.ndarray")
@@ -37,17 +39,17 @@ class MAB(ABC):
         return arm
 
     def _validate_reward(self, reward: float) -> float:
-        if not isinstance(reward, (int, (float, np.floating))):
+        if not isinstance(reward, (float, np.floating)):
             raise TypeError("reward must be a number")
-        return float(reward)
+        return reward
 
     @abstractmethod
-    def play(self, context):
+    def play(self, context: Optional[np.ndarray] = None) -> int:
         """Deve restituire un braccio (arm) da selezionare."""
         self._context = self._validate_context(context)
 
     @abstractmethod
-    def update(self, arm, reward, context):
+    def update(self, arm: int, reward: float, context: Optional[float] = None) -> None:
         """Aggiorna il valore del braccio selezionato con la ricompensa ottenuta."""
         self._arm = self._validate_arm(arm)
         self._reward = self._validate_reward(reward)

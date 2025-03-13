@@ -52,6 +52,24 @@ def get_train_valid_test_matrix(df_ratings: pd.DataFrame, all_movies_id: pd.Inde
     return train_matrix, valid_matrix, test_matrix
 
 
+def compute_mean_form_movie(movie_id: str, df_ratings: pd.DataFrame) -> float:
+    """Calcola il rating medio normalizzato per un film"""
+    min_rating_value: float = 0.0
+    max_rating_value: float = 5.0
+    movie_ratings = df_ratings[df_ratings["movieId"] == movie_id]["rating"]
+    if movie_ratings.empty:
+        return 0.0  # Se non ci sono rating, restituisce 0
+    # Calcola il rating medio per il film
+    avg_rating = movie_ratings.mean()
+    # Normalizza il rating medio [0,5] -> [0,1]
+    return (avg_rating - min_rating_value) / (max_rating_value - min_rating_value)
+
+
+def compute_hybrid_reward(similarity: float, mean_reward: float, beta: float = 0.5) -> float:
+    # Calcola della reward: combinazione lineare di similarità e rating medio del film selezionato
+    return beta * similarity + (1 - beta) * mean_reward
+
+
 # def pearson_distance_manual(u: np.ndarray, v: np.ndarray, flag: bool = False) -> float:
 #     """Distanza di Pearson (1 - |correlazione|)"""
 #     u_mean = np.mean(u)
