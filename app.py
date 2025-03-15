@@ -142,7 +142,6 @@ app_instance = MovieRecommenderApp()
 def search_movies():
     data = request.get_json()
     query = data.get('query', '')
-    #title = app_instance.movie_finder(query)
     results = app_instance.search_movie_by_title(query)
     print(results)
     results = [result.to_dict() for result in results]
@@ -157,7 +156,7 @@ def movie_details(movie_id):
 @app.route('/recommend/content', methods=['POST'])
 def content_recommendations():
     data = request.get_json()
-    query = data.get('query', '')
+    query = data.get('title', '')
     title = app_instance.movie_finder(query)
     top_n = data.get('top_n', 10)
     results = app_instance.run_content_recommender(title, top_n).to_dict(orient='records')
@@ -175,7 +174,7 @@ def content_recommendations():
 @app.route('/recommend/content_mab', methods=['POST'])
 def content_recommendations_mab():
     data = request.get_json()
-    query = data.get('query', '')
+    query = data.get('title', '')
     title = app_instance.movie_finder(query)
     top_n = data.get('top_n', 10)
     results_ids = app_instance.run_content_item_recommender_mab(title)

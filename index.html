@@ -935,8 +935,6 @@
         const title = document.getElementById('contentTitleMab').value;
         if (!title) return;
 
-        console.log('title:', title);
-
         showLoading('contentMabLoading');
         try {
           const response = await fetch(`${API_URL}/recommend/content_mab`, {
