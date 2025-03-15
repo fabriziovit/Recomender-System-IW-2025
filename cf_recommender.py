@@ -20,10 +20,14 @@ class CollaborativeRecommender:
             self.model_user = model_user
 
         self._transposed_matrix = None
+
         self._is_fitted_on_matrix_T_item = False
-        self._dist_item: pd.Series = None
+        self._sim_items: pd.Series = None
+        self._dist_items: pd.Series = None
+
         self._is_fitted_on_matrix_user = False
-        self._dist_user: pd.Series = None
+        self._sim_users: pd.Series = None
+        self._dist_users: pd.Series = None
 
     def fit_item_model(self, matrix: pd.DataFrame, re_fit: bool = False) -> None:
         """
@@ -69,9 +73,11 @@ class CollaborativeRecommender:
         similar_movies_list = [all_movie_ids[pos_idx] for pos_idx in pos_indexes.squeeze().tolist()[1:]]
 
         # Salva le distanze item-item per il film specificato
-        self._dist_item = pd.Series(distances.squeeze().tolist()[1:], index=similar_movies_list)
+        self._dist_items = pd.Series(distances.squeeze().tolist()[1:], index=similar_movies_list)
+        # Salva le similarità item-item per il film specificato
+        self._sim_items = pd.Series(1 - self._dist_items, index=similar_movies_list)
 
-        print(f"Film simili trovati per il film: {df_movies.loc[movie_id, 'title']} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self._dist_item.items()]}")
+        print(f"Film simili trovati per il film: {df_movies.loc[movie_id, 'title']} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self._dist_items.items()]}")
 
         # Crea un DataFrame con le raccomandazioni dei film
         return df_movies.loc[similar_movies_list]
@@ -95,22 +101,24 @@ class CollaborativeRecommender:
         similar_users = [all_users[pos_idx] for pos_idx in pos_indexes.squeeze().tolist()[1:]]
 
         # Salava le distanze user-user per l'utente specificato
-        self._dist_user = pd.Series(distances.squeeze().tolist()[1:], index=similar_users)
+        self._dist_users = pd.Series(distances.squeeze().tolist()[1:], index=similar_users)
+        # Salava le similarità user-user per l'utente specificato
+        self._sim_users = pd.Series(1 - self._dist_users, index=similar_users)
 
-        print(f"#Utenti simili per user {user_id}: {similar_users} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self._dist_user.items()]}")
+        print(f"#Utenti simili per user {user_id}: {similar_users} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self._dist_users.items()]}")
 
         # 4. Recupera i film già visti dall'utente target
         seen_mask = matrix.loc[user_id] > 0.0
         seen_movies = matrix.loc[user_id][seen_mask].index
-        print(f"Film visti dall'utente {user_id}: {df_movies.loc[seen_movies] [['title', 'genres']]}")
-        print(f"L'utente {user_id} ha visto (numero: {len(seen_movies)}) i seguenti movie_ids: {seen_movies.tolist()}\n")
+        # print(f"Film visti dall'utente {user_id}: {df_movies.loc[seen_movies] [['title', 'genres']]}")
+        # print(f"L'utente {user_id} ha visto (numero: {len(seen_movies)}) i seguenti movie_ids: {seen_movies.tolist()}\n")
 
         # 5. Rimuove i film già visti dall'utente target dalla lista dei raccomandabili
-        similars_df = matrix.loc[similar_users]
-        similars_df = similars_df.loc[:, ~similars_df.columns.isin(seen_movies)]
+        similars_movies_df = matrix.loc[similar_users]
+        similars_movies_df = similars_movies_df.loc[:, ~similars_movies_df.columns.isin(seen_movies)]
 
-        # 6. Calcola la media pesata per colonne e ordina i risultati in ordine decrescente
-        mean_weighted_vec = matrix.loc[similar_users].apply(lambda x: np.average(x, weights=1 - self._dist_user.to_numpy()))
+        # 6. Calcola la media pesata per colonne e ordina i risultati in ordine decrescente per similitudine (1 - distanza)
+        mean_weighted_vec = matrix.loc[similar_users].apply(lambda x: np.average(x, weights=1 - self._dist_users.to_numpy()))
         mean_movies_df = mean_weighted_vec.to_frame(name="values").sort_values(by="values", ascending=False)
         return mean_movies_df.merge(df_movies, how="left", on="movieId")
 
