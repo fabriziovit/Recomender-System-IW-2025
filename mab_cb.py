@@ -68,19 +68,20 @@ def _start_rounds(
         # 1. Ottieni il punteggio di similarità per il film selezionato (dal vettore sim_scores)
         curr_similarity: float = sim_scores[curr_selected_arm]
 
-        # 2. Calcola la reward media normalizzata per il film selezionato
-        curr_mean_reward: float = min_max_normalize_mean(curr_movie_id, df_ratings)
+        # 2. Calcola la media normalizzata per il film selezionato
+        movie_ratings: pd.Series = df_ratings[df_ratings["movieId"] == curr_movie_id]["rating"]
+        curr_mean_reward: float = min_max_normalize_mean(movie_ratings)
 
         # 3. Calcola la hybrid reward
         reward = compute_hybrid_reward_content(curr_similarity, curr_mean_reward, beta=0.8)
 
-        #_print_info_rounds(i, curr_selected_arm, curr_idx_embedd, curr_movie_id, curr_movie_title, curr_similarity, curr_mean_reward, reward)
+        # _print_info_rounds(i, curr_selected_arm, curr_idx_embedd, curr_movie_id, curr_movie_title, curr_similarity, curr_mean_reward, reward)
 
         # 4. Aggiorna il bandit con la reward calcolata
         bandit_mab.update(curr_selected_arm, reward)
 
 
-def mab_on_contentbased(movie_title: str, df_ratings: pd.DataFrame, num_round: int, N: int) -> list:
+def mab_on_contentbased(movie_title: str, df_ratings: pd.DataFrame, num_round: int = 1_000, N: int = 20) -> list:
 
     # 0. Carica il dataset per il content-based recommender
     df = pd.read_csv("dataset/movies_with_abstracts_complete.csv", on_bad_lines="warn")
@@ -105,7 +106,7 @@ def mab_on_contentbased(movie_title: str, df_ratings: pd.DataFrame, num_round: i
     # Simulazione del gioco
     _start_rounds(num_round, bandit_mab, df_recommendations, indexes_of_embedd, sim_scores_items, df_ratings)
 
-    #_print_final_stats(bandit_mab, df_recommendations, indexes_of_embedd)
+    # _print_final_stats(bandit_mab, df_recommendations, indexes_of_embedd)
 
     return _get_topk_movies(bandit_mab, df_recommendations, indexes_of_embedd)
 

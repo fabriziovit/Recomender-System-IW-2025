@@ -13,7 +13,7 @@ def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFram
     for i, (curr_arm, q_value) in enumerate(top_n_arms):
         curr_movie_id = df_recommendations.iloc[curr_arm]["movieId"]
         curr_movie_title = df_recommendations.iloc[curr_arm]["title"]
-        
+
         print(
             f"  - Arm {curr_arm}: (Movie ID {curr_movie_id}, '{curr_movie_title}') "
             f"con Q = {bandit_mab.get_qvalues()[curr_arm]:.2f}, reward_tot = {bandit_mab.get_rewards_list()[curr_arm]:.2f}"
@@ -62,22 +62,23 @@ def _start_rounds_cf_item(
         # 1. Ottieni il punteggio di similarità per il film selezionato (dal vettore sim_scores)
         curr_similarity: float = sim_scores[curr_arm]
 
-        # 2. Calcola la reward media normalizzata per il film selezionato
-        curr_mean_reward: float = min_max_normalize_mean(curr_movie_id, df_ratings)
+        # 2. Calcola la media normalizzata per il film selezionato
+        movie_ratings: pd.Series = df_ratings[df_ratings["movieId"] == curr_movie_id]["rating"]
+        curr_mean: float = min_max_normalize_mean(movie_ratings)
 
         # 3. Calcola la hybrid reward
-        hybrid_reward = compute_hybrid_reward_item(curr_similarity, curr_mean_reward, beta=0.8)
+        hybrid_reward = compute_hybrid_reward_item(curr_similarity, curr_mean, beta=0.8)
 
         print(f"Round {i}:")
         print(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
-        print(f"  - Similarità: {curr_similarity:.3f}, Mean Normalizzata: {curr_mean_reward:.3f}, Hybrid reward: {hybrid_reward:.3f}")
+        print(f"  - Similarità: {curr_similarity:.3f}, Mean Normalizzata: {curr_mean:.3f}, Hybrid reward: {hybrid_reward:.3f}")
         print()
 
         # 4. Aggiorna il bandit con la reward calcolata
         bandit_mab.update(curr_arm, hybrid_reward)
 
 
-def _mab_on_collabfilter_item(recomm: CollaborativeRecommender, movie_id: int, df_ratings: pd.DataFrame, df_movies: pd.DataFrame, num_round: int, NN: int) -> None:
+def _mab_on_collabfilter_item(recomm: CollaborativeRecommender, movie_id: int, df_ratings: pd.DataFrame, df_movies: pd.DataFrame, num_round: int = 1_000, NN: int = 20) -> None:
 
     # 1. Otteniamo il DataFrame dei film raccomandati
     df_recommendations: pd.DataFrame = recomm.get_item_recommendations(movie_id, df_movies).head(NN)
@@ -163,7 +164,7 @@ def _start_rounds_cf_user(
 
 
 def _mab_on_collabfilter_user(
-    recomm: CollaborativeRecommender, matrix: pd.DataFrame, user_id: int, df_ratings: pd.DataFrame, df_movies: pd.DataFrame, num_round: int, NN: int
+    recomm: CollaborativeRecommender, matrix: pd.DataFrame, user_id: int, df_ratings: pd.DataFrame, df_movies: pd.DataFrame, num_round: int = 1_000, NN: int = 20
 ) -> None:
 
     # 1. Otteniamo il DataFrame dei film raccomandati
@@ -183,14 +184,14 @@ def _mab_on_collabfilter_user(
     _start_rounds_cf_user(num_round, bandit_mab, sim_scores, df_recommendations, df_ratings)
 
     # Stampa le statistiche finali del bandit
-    #_print_final_stats(bandit_mab, df_recommendations)
+    # _print_final_stats(bandit_mab, df_recommendations)
 
     # Recupera i top k film raccomandati con il bandit
     return _get_topk_movies(bandit_mab, df_recommendations)
 
 
 def mab_on_collabfilter(
-    df_ratings: pd.DataFrame, df_movies: pd.DataFrame, movie_id: Optional[int] = None, user_id: Optional[int] = None, num_round: int = 5_000, N: int = 20
+    df_ratings: pd.DataFrame, df_movies: pd.DataFrame, movie_id: Optional[int] = None, user_id: Optional[int] = None, num_round: int = 1_000, N: int = 20
 ) -> list:
 
     if not movie_id and not user_id:

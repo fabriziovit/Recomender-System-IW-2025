@@ -11,7 +11,7 @@ def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFram
     for i, (curr_arm, q_value) in enumerate(top_n_arms):
         curr_movie_id = df_recommendations.iloc[curr_arm]["movieId"]
         curr_movie_title = df_recommendations.iloc[curr_arm]["title"]
-        
+
         print(
             f"  - Arm {curr_arm}: (Movie ID {curr_movie_id}, '{curr_movie_title}') "
             f"con Q = {bandit_mab.get_qvalues()[curr_arm]:.2f}, reward_tot = {bandit_mab.get_rewards_list()[curr_arm]:.2f}"
@@ -57,7 +57,7 @@ def _start_rounds_mf_sgd(
         bandit_mab.update(curr_arm, reward)
 
 
-def mab_on_sgd(df_ratings: pd.DataFrame, df_movies: pd.DataFrame, user_id: int, num_round: int, N: int = 20) -> list:
+def mab_on_sgd(df_ratings: pd.DataFrame, df_movies: pd.DataFrame, user_id: int, num_round: int = 1_000, N: int = 20) -> list:
     # 1. Crea la utility matrix
     utility_matrix = df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
 
@@ -81,7 +81,7 @@ def mab_on_sgd(df_ratings: pd.DataFrame, df_movies: pd.DataFrame, user_id: int, 
     _start_rounds_mf_sgd(num_round, bandit_mab, df_recommendations)
 
     # Stampa le statistiche finali del bandit
-    #_print_final_stats(bandit_mab, df_recommendations)
+    # _print_final_stats(bandit_mab, df_recommendations)
 
     # Recupera i top k film raccomandati con il bandit
     return _get_topk_movies(bandit_mab, df_recommendations)
