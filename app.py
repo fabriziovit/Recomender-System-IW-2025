@@ -6,7 +6,7 @@ import os
 from cb_recommender import ContentBasedRecommender
 from cf_recommender import CollaborativeRecommender
 from sklearn.neighbors import NearestNeighbors
-from simulate_mab import simulate_on_cb_recomm
+from simulate_mab import mab_on_contentbased, mab_on_collabfilter
 from utils import load_movielens_data, pearson_distance
 from director_recommender import recommend_by_movie_id, recommend_films_with_actors
 from fuzzywuzzy import process
@@ -77,7 +77,7 @@ class MovieRecommenderApp:
     def search_movie_by_title(self, query: str) -> list:
         if self.df_with_abstracts is None:
             return []
-        results = self.df_with_abstracts[self.df_with_abstracts['title'].str.contains(query, case=False)]
+        results = self.df_with_abstracts[self.df_with_abstracts['title'].str.contains(query, case=False, regex=False)]
         movies_list = []
         for _, row in results.iterrows():
             movies_list.append(row)
@@ -95,9 +95,6 @@ class MovieRecommenderApp:
                     num_ratings = len(ratings)
                     movie['avg_rating'] = avg_rating
                     movie['num_ratings'] = num_ratings
-                    movie['id'] = movie_id
-                    movie['dbpedia_abstract'] = movie['dbpedia_abstract'][:200] + "..." if len(movie['dbpedia_abstract']) > 200 else movie['dbpedia_abstract']
-                    movie['dbpedia_director'] = movie['dbpedia_director'][:200] + "..." if len(movie['dbpedia_director']) > 200 else movie['dbpedia_director']
             return movie
         except (IndexError, KeyError):
             return {}
@@ -109,15 +106,18 @@ class MovieRecommenderApp:
                 return pd.DataFrame()
         return self.content_recommender.recommend(movie_title, top_n=top_n)
     
-    def run_content_item_recommender_mab(self, movie_title: str, top_n: int = 10) -> pd.DataFrame:
-        return simulate_on_cb_recomm(movie_title, self.df_ratings, 20)[:top_n]
+    def run_content_recommender_mab(self, movie_title: str, top_n: int = 10) -> pd.DataFrame:
+        return mab_on_contentbased(movie_title, self.df_ratings, 20)[:top_n]
 
     def run_collaborative_item_recommender(self, movie_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.collaborative_initialized:
             self.initialize_collaborative_recommender()
             if not self.collaborative_initialized:
                 return pd.DataFrame()
-        return self.collaborative_recommender.get_item_recommendations(movie_id, self.utility_matrix, self.df_movies).head(top_n)
+        return self.collaborative_recommender.get_item_recommendations(movie_id, self.df_movies).head(top_n)
+    
+    def run_collaborative_item_recommender_mab(self, movie_id: int, top_n: int = 10) -> pd.DataFrame:
+        return mab_on_collabfilter(self.df_ratings, self.df_movies, movie_id, None, N=20)
 
     def run_collaborative_user_recommender(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.collaborative_initialized:
@@ -125,6 +125,10 @@ class MovieRecommenderApp:
             if not self.collaborative_initialized:
                 return pd.DataFrame()
         return self.collaborative_recommender.get_user_recommendations(user_id, self.utility_matrix, self.df_movies).head(top_n)
+    
+    def run_collaborative_user_recommender_mab(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
+        return mab_on_collabfilter(self.df_ratings, self.df_movies, None, user_id, N=20)[:top_n]
+
 
     def run_director_recommender_by_movie(self, movie_id: int, max_actors: int = 5) -> str:
         if not self.check_director_recommender():
@@ -143,20 +147,39 @@ def search_movies():
     data = request.get_json()
     query = data.get('query', '')
     results = app_instance.search_movie_by_title(query)
-    print(results)
     results = [result.to_dict() for result in results]
     return jsonify(results)
 
 @app.route('/movie/<int:movie_id>', methods=['GET'])
 def movie_details(movie_id):
+    movie = app_instance.df_with_abstracts[app_instance.df_with_abstracts['movieId'] == movie_id]
+
+    if(movie_id <= 0):
+        return jsonify({
+            "error": True,
+            "message": "Movie ID must be a positive integer."
+        }), 404
+    
+    if len(movie) == 0:
+        return jsonify({
+            "error": True,
+            "message": f"Movie with ID {movie_id} not found."
+        }), 404
+    
     details = app_instance.show_movie_details(movie_id)
-    print(details)
     return jsonify(details)
 
 @app.route('/recommend/content', methods=['POST'])
 def content_recommendations():
     data = request.get_json()
     query = data.get('title', '')
+
+    if(query == ''):
+        return jsonify({
+            "error": True,
+            "message": "Title cannot be empty."
+        }), 400
+    
     title = app_instance.movie_finder(query)
     top_n = data.get('top_n', 10)
     results = app_instance.run_content_recommender(title, top_n).to_dict(orient='records')
@@ -175,10 +198,16 @@ def content_recommendations():
 def content_recommendations_mab():
     data = request.get_json()
     query = data.get('title', '')
+
+    if(query == ''):
+        return jsonify({
+            "error": True,
+            "message": "Title cannot be empty."
+        }), 400
+    
     title = app_instance.movie_finder(query)
     top_n = data.get('top_n', 10)
-    results_ids = app_instance.run_content_item_recommender_mab(title)
-    print(results_ids)
+    results_ids = app_instance.run_content_recommender_mab(title)
     results = app_instance.df_with_abstracts[app_instance.df_with_abstracts['movieId'].isin(results_ids)].to_dict(orient='records')
     
     # Aggiungi informazioni sul film originale
@@ -196,6 +225,20 @@ def item_recommendations():
     data = request.get_json()
     movie_id = data.get('movie_id', 0)
     top_n = data.get('top_n', 10)
+
+    if(movie_id <= 0):
+        return jsonify({
+            "error": True,
+            "message": "Movie ID must be a positive integer."
+        }), 404
+    
+    movie = app_instance.df_with_abstracts[app_instance.df_with_abstracts['movieId'] == movie_id]
+
+    if len(movie) == 0:
+        return jsonify({
+            "error": True,
+            "message": f"Movie with ID {movie_id} not found."
+        }), 404
     
     # Ottieni i dettagli del film originale
     original_movie = app_instance.show_movie_details(movie_id)
@@ -218,23 +261,119 @@ def item_recommendations():
     
     return jsonify(response)
 
+@app.route('/recommend/item_mab', methods=['POST'])
+def item_recommendations_mab():
+    data = request.get_json()
+    movie_id = data.get('movie_id', 0)
+    top_n = data.get('top_n', 10)
+
+    if(movie_id <= 0):
+        return jsonify({
+            "error": True,
+            "message": "Movie ID must be a positive integer."
+        }), 404
+    
+    movie = app_instance.df_with_abstracts[app_instance.df_with_abstracts['movieId'] == movie_id]
+    if len(movie) == 0:
+        return jsonify({
+            "error": True,
+            "message": f"Movie with ID {movie_id} not found."
+        }), 404
+    
+    # Ottieni i dettagli del film originale
+    original_movie = app_instance.show_movie_details(movie_id)
+    
+    # Ottieni le raccomandazioni
+    results_ids = app_instance.run_collaborative_item_recommender_mab(movie_id, top_n)
+    results = app_instance.df_with_abstracts[app_instance.df_with_abstracts['movieId'].isin(results_ids)].to_dict(orient='records')
+    
+    # Crea la risposta con il film originale e le raccomandazioni
+    response = {
+        "original_movie": {
+            "id": movie_id,
+            "title": original_movie.get('title', 'Unknown')
+        },
+        "recommendations": results
+    }
+    
+    return jsonify(response)
+
 @app.route('/recommend/user', methods=['POST'])
 def user_recommendations():
     data = request.get_json()
     user_id = data.get('user_id', 0)
+
+    if(user_id <= 0):
+        return jsonify({
+            "error": True,
+            "message": "User ID must be a positive integer."
+        }), 404
+    
+    if user_id > 610:
+        return jsonify({
+            "error": True,
+            "message": f"User with ID {user_id} not found."
+        }), 404
+    
     top_n = data.get('top_n', 10)
     df = app_instance.run_collaborative_user_recommender(user_id, top_n)
     df = df.reset_index()
     df_results = df.merge(app_instance.df_with_abstracts, on='movieId', suffixes=('', '_drop'))
     df_results = df_results.loc[:, ~df_results.columns.str.contains('_drop')]
     df_results = df_results.drop(columns=['values'])
-    results = df_results.to_dict(orient='records')
-    return jsonify(results)
+    json_response ={
+        "userId": user_id,
+        "results": df_results.to_dict(orient='records')
+    }
+
+    return jsonify(json_response)
+
+@app.route('/recommend/user_mab', methods=['POST'])
+def user_recommendations_mab():
+    data = request.get_json()
+    user_id = data.get('user_id', 0)
+
+    if(user_id <= 0):
+        return jsonify({
+            "error": True,
+            "message": "User ID must be a positive integer."
+        }), 404
+    
+    if user_id > 610:
+        return jsonify({
+            "error": True,
+            "message": f"User with ID {user_id} not found."
+        }), 404
+
+    top_n = data.get('top_n', 10)
+
+    results_ids = app_instance.run_collaborative_user_recommender_mab(user_id, top_n)
+    results = app_instance.df_with_abstracts[app_instance.df_with_abstracts['movieId'].isin(results_ids)].to_dict(orient='records')
+    json_response ={
+        "userId": user_id,
+        "results": results
+    }
+
+    return jsonify(json_response)
 
 @app.route('/recommend/director/movie', methods=['POST']) 
 def director_recommendations_movie():
     data = request.get_json()
     movie_id = data.get('movie_id', 0)
+
+    if(movie_id <= 0):
+        return jsonify({
+            "error": True,
+            "message": "Movie ID must be a positive integer."
+        }), 404
+    
+    movie = app_instance.df_with_abstracts[app_instance.df_with_abstracts['movieId'] == movie_id]
+    if len(movie) == 0:
+        return jsonify({
+            "error": True,
+            "message": f"Movie with ID {movie_id} not found."
+        }), 404
+    
     max_actors = data.get('max_actors', 5)
     results = app_instance.run_director_recommender_by_movie(movie_id, max_actors)
     return jsonify({'result': results})
@@ -243,9 +382,58 @@ def director_recommendations_movie():
 def director_recommendations_name():
     data = request.get_json()
     director = data.get('director', '')
+
+    if director == '':
+        return jsonify({
+            "error": True,
+            "message": "Director name cannot be empty."
+        }), 400
+    
     max_actors = data.get('max_actors', 5)
     results = app_instance.run_director_recommender_by_director(director, max_actors)
     return jsonify({'result': results})
 
+@app.route('/predict', methods=['POST'])
+def predict():
+    data = request.get_json()
+    user_id = data.get('user_id', 0)
+    movie_id = data.get('movie_id', 0)
+    movie = app_instance.df_with_abstracts[app_instance.df_with_abstracts['movieId'] == movie_id]
+    movie.reset_index(drop=True, inplace=True)
+
+    if len(movie) == 0:
+        return jsonify({
+            "error": True,
+            "message": f"Il film con ID {movie_id} non è stato trovato."
+        }), 404
+    
+    # Verifica se l'utente esiste
+    if user_id > 610:
+        return jsonify({
+            "error": True,
+            "message": f"L'utente con ID {user_id} non esiste."
+        }), 404
+
+    ratings = app_instance.df_ratings[app_instance.df_ratings['movieId'] == movie_id]
+    if len(ratings) > 0:
+        avg_rating = ratings['rating'].mean()
+        num_ratings = len(ratings)
+        movie['avg_rating'] = avg_rating
+        movie['num_ratings'] = num_ratings
+
+    if(ratings[ratings['userId'] == user_id].shape[0] > 0):
+        movie['already_rated'] = True
+        movie['prediction_rating'] = ratings[ratings['userId'] == user_id]['rating'].values[0]
+    else:
+        movie['already_rated'] = False
+        movie['prediction_rating'] = np.random.uniform(0, 5)
+
+    movie = movie.to_dict(orient='records')
+    json_response = {
+        "userId": user_id,
+        "movie": movie,
+    }
+    return jsonify(json_response)
+    
 if __name__ == '__main__':
     app.run(debug=True)

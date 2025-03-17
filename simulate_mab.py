@@ -33,7 +33,7 @@ def _start_rounds(
 
         # 0. Il bandit seleziona un braccio
         curr_selected_arm: int = bandit_mab.play()
-        print(f"curr_selected_arm: {curr_selected_arm}")
+        #print(f"curr_selected_arm: {curr_selected_arm}")
         if not collab_filter:
             # Content-Based: Recupera l'indice dell'embedding del film selezionato dal bandit
             curr_idx_embedd: int = indexes_embedd_of_similiar[curr_selected_arm]
@@ -45,7 +45,7 @@ def _start_rounds(
             curr_movie_id: int = df_recommendations.iloc[curr_selected_arm]["movieId"]
             curr_movie_title: str = df_recommendations.iloc[curr_selected_arm]["title"]
 
-        print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
+        #print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
 
         # 1. Ottieni il punteggio di similarità per il film selezionato (dal vettore sim_scores)
         curr_similarity: float = sim_scores[curr_selected_arm]
@@ -56,11 +56,12 @@ def _start_rounds(
         # 3. Calcola la hybrid reward
         reward = compute_hybrid_reward(curr_similarity, curr_mean_reward, beta=0.8)
 
+        '''
         if not collab_filter:
             _print_info_rounds(i, curr_selected_arm, curr_idx_embedd, curr_movie_id, curr_movie_title, curr_similarity, curr_mean_reward, reward)
         else:
             _print_info_rounds(i, curr_selected_arm, None, curr_movie_id, curr_movie_title, curr_similarity, curr_mean_reward, reward)
-
+        '''
         # 4. Aggiorna il bandit con la reward calcolata
         bandit_mab.update(curr_selected_arm, reward)
 
@@ -207,12 +208,10 @@ def mab_on_collabfilter(df_ratings: pd.DataFrame, df_movies: pd.DataFrame, movie
         # Raccomandazioni per Item-Colaborative Filtering
         recomm_mab_item = _mab_on_collabfilter_item(recomm, movie_id, df_ratings, df_movies, N)
         return recomm_mab_item
-
     else:
         # Raccomandazioni per User-Colaborative Filtering
         recomm_mab_user = _mab_on_collabfilter_user(recomm, utility_matrix, user_id, df_ratings, df_movies, N)
         return recomm_mab_user
-
 
 def main():
     # 0. Carica i dati di MovieLens (df_movies, df_ratings, df_tags)
