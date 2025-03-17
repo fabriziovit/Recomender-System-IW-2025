@@ -6,7 +6,7 @@ import os
 from cb_recommender import ContentBasedRecommender
 from cf_recommender import CollaborativeRecommender
 from sklearn.neighbors import NearestNeighbors
-from simulate_mab import simulate_on_cb_recomm
+from simulate_cb_mab import simulate_on_cb_recomm
 from utils import load_movielens_data, pearson_distance
 from director_recommender import recommend_by_movie_id, recommend_films_with_actors
 from fuzzywuzzy import process

@@ -77,7 +77,7 @@ class CollaborativeRecommender:
         # Salva le similarità item-item per il film specificato
         self._sim_items = pd.Series(1 - self._dist_items, index=similar_movies_list)
 
-        print(f"Film simili trovati per il film: {df_movies.loc[movie_id, 'title']} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self._dist_items.items()]}")
+        print(f"\nFilm simili trovati per il film: {df_movies.loc[movie_id, 'title']} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self._dist_items.items()]}")
 
         # Crea un DataFrame con le raccomandazioni dei film
         return df_movies.loc[similar_movies_list]
@@ -105,7 +105,7 @@ class CollaborativeRecommender:
         # Salava le similarità user-user per l'utente specificato
         self._sim_users = pd.Series(1 - self._dist_users, index=similar_users)
 
-        print(f"#Utenti simili per user {user_id}: {similar_users} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self._dist_users.items()]}")
+        print(f"\nUtenti simili per user {user_id}: {similar_users} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self._dist_users.items()]}")
 
         # 4. Recupera i film già visti dall'utente target
         seen_mask = matrix.loc[user_id] > 0.0
@@ -113,13 +113,17 @@ class CollaborativeRecommender:
         # print(f"Film visti dall'utente {user_id}: {df_movies.loc[seen_movies] [['title', 'genres']]}")
         # print(f"L'utente {user_id} ha visto (numero: {len(seen_movies)}) i seguenti movie_ids: {seen_movies.tolist()}\n")
 
-        # 5. Rimuove i film già visti dall'utente target dalla lista dei raccomandabili
+        # 5. Recupero i film visti dagli utenti simili
         similars_movies_df = matrix.loc[similar_users]
+        # 5 Rimuove i film già visti dall'utente target
         similars_movies_df = similars_movies_df.loc[:, ~similars_movies_df.columns.isin(seen_movies)]
+        # print(f"Film visti dagli utenti simili: {similars_movies_df.columns.tolist()}")
 
-        # 6. Calcola la media pesata per colonne e ordina i risultati in ordine decrescente per similitudine (1 - distanza)
-        mean_weighted_vec = matrix.loc[similar_users].apply(lambda x: np.average(x, weights=1 - self._dist_users.to_numpy()))
+        # 6. Vettore contenente la media pesata dei rating dei film raccomandati
+        mean_weighted_vec = similars_movies_df.apply(lambda x: np.average(x, weights=1 - self._dist_users.to_numpy()))
+        # 6. Ordina i film raccomandati in base alla media pesata dei rating (mean_weighted_vec)
         mean_movies_df = mean_weighted_vec.to_frame(name="values").sort_values(by="values", ascending=False)
+
         return mean_movies_df.merge(df_movies, how="left", on="movieId")
 
 
