@@ -13,6 +13,7 @@ def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFram
     for i, (curr_arm, q_value) in enumerate(top_n_arms):
         curr_movie_id = df_recommendations.iloc[curr_arm]["movieId"]
         curr_movie_title = df_recommendations.iloc[curr_arm]["title"]
+        
         print(
             f"  - Arm {curr_arm}: (Movie ID {curr_movie_id}, '{curr_movie_title}') "
             f"con Q = {bandit_mab.get_qvalues()[curr_arm]:.2f}, reward_tot = {bandit_mab.get_rewards_list()[curr_arm]:.2f}"
@@ -182,7 +183,7 @@ def _mab_on_collabfilter_user(
     _start_rounds_cf_user(num_round, bandit_mab, sim_scores, df_recommendations, df_ratings)
 
     # Stampa le statistiche finali del bandit
-    _print_final_stats(bandit_mab, df_recommendations)
+    #_print_final_stats(bandit_mab, df_recommendations)
 
     # Recupera i top k film raccomandati con il bandit
     return _get_topk_movies(bandit_mab, df_recommendations)

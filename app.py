@@ -6,7 +6,9 @@ import os
 from cb_recommender import ContentBasedRecommender
 from cf_recommender import CollaborativeRecommender
 from sklearn.neighbors import NearestNeighbors
-from simulate_cb_mab import simulate_on_cb_recomm
+from mab_cb import mab_on_contentbased
+from mab_cf import mab_on_collabfilter
+from mab_sgd import mab_on_sgd
 from utils import load_movielens_data, pearson_distance
 from director_recommender import recommend_by_movie_id, recommend_films_with_actors
 from fuzzywuzzy import process
@@ -107,7 +109,7 @@ class MovieRecommenderApp:
         return self.content_recommender.recommend(movie_title, top_n=top_n)
     
     def run_content_recommender_mab(self, movie_title: str, top_n: int = 10) -> pd.DataFrame:
-        return mab_on_contentbased(movie_title, self.df_ratings, 20)[:top_n]
+        return mab_on_contentbased(movie_title, self.df_ratings, num_round=1_000, N=20)[:top_n]
 
     def run_collaborative_item_recommender(self, movie_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.collaborative_initialized:
@@ -117,7 +119,7 @@ class MovieRecommenderApp:
         return self.collaborative_recommender.get_item_recommendations(movie_id, self.df_movies).head(top_n)
     
     def run_collaborative_item_recommender_mab(self, movie_id: int, top_n: int = 10) -> pd.DataFrame:
-        return mab_on_collabfilter(self.df_ratings, self.df_movies, movie_id, None, N=20)
+        return mab_on_collabfilter(self.df_ratings, self.df_movies, movie_id, None)
 
     def run_collaborative_user_recommender(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.collaborative_initialized:
@@ -127,8 +129,7 @@ class MovieRecommenderApp:
         return self.collaborative_recommender.get_user_recommendations(user_id, self.utility_matrix, self.df_movies).head(top_n)
     
     def run_collaborative_user_recommender_mab(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
-        return mab_on_collabfilter(self.df_ratings, self.df_movies, None, user_id, N=20)[:top_n]
-
+        return mab_on_collabfilter(self.df_ratings, self.df_movies, None, user_id)[:top_n]
 
     def run_director_recommender_by_movie(self, movie_id: int, max_actors: int = 5) -> str:
         if not self.check_director_recommender():

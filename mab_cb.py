@@ -74,7 +74,7 @@ def _start_rounds(
         # 3. Calcola la hybrid reward
         reward = compute_hybrid_reward_content(curr_similarity, curr_mean_reward, beta=0.8)
 
-        _print_info_rounds(i, curr_selected_arm, curr_idx_embedd, curr_movie_id, curr_movie_title, curr_similarity, curr_mean_reward, reward)
+        #_print_info_rounds(i, curr_selected_arm, curr_idx_embedd, curr_movie_id, curr_movie_title, curr_similarity, curr_mean_reward, reward)
 
         # 4. Aggiorna il bandit con la reward calcolata
         bandit_mab.update(curr_selected_arm, reward)
@@ -105,7 +105,7 @@ def mab_on_contentbased(movie_title: str, df_ratings: pd.DataFrame, num_round: i
     # Simulazione del gioco
     _start_rounds(num_round, bandit_mab, df_recommendations, indexes_of_embedd, sim_scores_items, df_ratings)
 
-    _print_final_stats(bandit_mab, df_recommendations, indexes_of_embedd)
+    #_print_final_stats(bandit_mab, df_recommendations, indexes_of_embedd)
 
     return _get_topk_movies(bandit_mab, df_recommendations, indexes_of_embedd)
 

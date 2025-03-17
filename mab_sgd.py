@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from eps_mab import EpsGreedyMAB
 from mf_sgd import MF_SGD_User_Based
-from utils import load_movielens_data, pearson_distance, min_max_normalize_mean, compute_hybrid_reward, min_max_normalize_values
+from utils import load_movielens_data, pearson_distance, min_max_normalize_mean, min_max_normalize_values
 
 
 def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame) -> None:
@@ -11,6 +11,7 @@ def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFram
     for i, (curr_arm, q_value) in enumerate(top_n_arms):
         curr_movie_id = df_recommendations.iloc[curr_arm]["movieId"]
         curr_movie_title = df_recommendations.iloc[curr_arm]["title"]
+        
         print(
             f"  - Arm {curr_arm}: (Movie ID {curr_movie_id}, '{curr_movie_title}') "
             f"con Q = {bandit_mab.get_qvalues()[curr_arm]:.2f}, reward_tot = {bandit_mab.get_rewards_list()[curr_arm]:.2f}"
@@ -80,7 +81,7 @@ def mab_on_sgd(df_ratings: pd.DataFrame, df_movies: pd.DataFrame, user_id: int, 
     _start_rounds_mf_sgd(num_round, bandit_mab, df_recommendations)
 
     # Stampa le statistiche finali del bandit
-    _print_final_stats(bandit_mab, df_recommendations)
+    #_print_final_stats(bandit_mab, df_recommendations)
 
     # Recupera i top k film raccomandati con il bandit
     return _get_topk_movies(bandit_mab, df_recommendations)
