@@ -58,7 +58,7 @@ def _start_rounds_mf_sgd(
         bandit_mab.update(curr_arm, reward)
 
 
-def mab_on_sgd(df_ratings: pd.DataFrame, df_movies: pd.DataFrame, user_id: int, num_round: int = 1_000, N: int = 20) -> list:
+def mab_on_sgd(df_ratings: pd.DataFrame, df_movies: pd.DataFrame, user_id: int, num_round: int = 10_000, N: int = 20) -> list:
     # 1. Crea la utility matrix
     utility_matrix = df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
 
@@ -82,7 +82,7 @@ def mab_on_sgd(df_ratings: pd.DataFrame, df_movies: pd.DataFrame, user_id: int, 
     _start_rounds_mf_sgd(num_round, bandit_mab, df_recommendations)
 
     # Stampa le statistiche finali del bandit
-    # _print_final_stats(bandit_mab, df_recommendations)
+    _print_final_stats(bandit_mab, df_recommendations)
 
     # Recupera i top k film raccomandati con il bandit
     return _get_topk_movies(bandit_mab, df_recommendations)

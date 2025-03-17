@@ -214,7 +214,17 @@ def content_recommendations_mab():
     title = app_instance.movie_finder(query)
     top_n = data.get("top_n", 10)
     results_ids = app_instance.run_content_recommender_mab(title)
-    results = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"].isin(results_ids)].to_dict(orient="records")
+    ordered_results = []
+
+    # Itera attraverso gli ID nell'ordine originale
+    for movie_id in results_ids:
+        # Trova la riga corrispondente e aggiungila alla lista dei risultati
+        movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
+        if not movie_row.empty:
+            ordered_results.append(movie_row.iloc[0].to_dict())
+
+    # La lista ordered_results ora contiene i dizionari nell'ordine originale
+    results = ordered_results
 
     # Aggiungi informazioni sul film originale
     response = {"original_movie": {"title": title}, "recommendations": results}
@@ -270,7 +280,17 @@ def item_recommendations_mab():
 
     # Ottieni le raccomandazioni
     results_ids = app_instance.run_collaborative_item_recommender_mab(movie_id, top_n)
-    results = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"].isin(results_ids)].to_dict(orient="records")
+    ordered_results = []
+
+    # Itera attraverso gli ID nell'ordine originale
+    for movie_id in results_ids:
+        # Trova la riga corrispondente e aggiungila alla lista dei risultati
+        movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
+        if not movie_row.empty:
+            ordered_results.append(movie_row.iloc[0].to_dict())
+
+    # La lista ordered_results ora contiene i dizionari nell'ordine originale
+    results = ordered_results
 
     # Crea la risposta con il film originale e le raccomandazioni
     response = {"original_movie": {"id": movie_id, "title": original_movie.get("title", "Unknown")}, "recommendations": results}
@@ -314,7 +334,17 @@ def user_recommendations_mab():
     top_n = data.get("top_n", 10)
 
     results_ids = app_instance.run_collaborative_user_recommender_mab(user_id, top_n)
-    results = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"].isin(results_ids)].to_dict(orient="records")
+    ordered_results = []
+
+    # Itera attraverso gli ID nell'ordine originale
+    for movie_id in results_ids:
+        # Trova la riga corrispondente e aggiungila alla lista dei risultati
+        movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
+        if not movie_row.empty:
+            ordered_results.append(movie_row.iloc[0].to_dict())
+
+    # La lista ordered_results ora contiene i dizionari nell'ordine originale
+    results = ordered_results
     json_response = {"userId": user_id, "results": results}
 
     return jsonify(json_response)
@@ -362,7 +392,17 @@ def sgd_recommendations():
         return jsonify({"error": True, "message": f"User with ID {user_id} not found."}), 404
     
     results_ids = app_instance.run_sgd_recommendations(user_id, top_n).index.tolist()
-    results = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"].isin(results_ids)].to_dict(orient="records")
+    ordered_results = []
+
+    # Itera attraverso gli ID nell'ordine originale
+    for movie_id in results_ids:
+        # Trova la riga corrispondente e aggiungila alla lista dei risultati
+        movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
+        if not movie_row.empty:
+            ordered_results.append(movie_row.iloc[0].to_dict())
+
+    # La lista ordered_results ora contiene i dizionari nell'ordine originale
+    results = ordered_results
     json_response = {"userId": user_id, "results": results}
     return jsonify(json_response)
 
@@ -380,10 +420,19 @@ def sgd_recommendations_mab():
     
     results_ids = app_instance.run_sgd_mab_recommender(user_id, top_n)
 
-    results = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"].isin(results_ids)].to_dict(orient="records")
+    ordered_results = []
+
+    # Itera attraverso gli ID nell'ordine originale
+    for movie_id in results_ids:
+        # Trova la riga corrispondente e aggiungila alla lista dei risultati
+        movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
+        if not movie_row.empty:
+            ordered_results.append(movie_row.iloc[0].to_dict())
+
+    # La lista ordered_results ora contiene i dizionari nell'ordine originale
+    results = ordered_results
     json_response = {"userId": user_id, "results": results}
     return jsonify(json_response)
-
 
 @app.route("/predict", methods=["POST"])
 def predict():
