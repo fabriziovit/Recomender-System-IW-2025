@@ -5,6 +5,7 @@ import numpy as np
 import os
 from cb_recommender import ContentBasedRecommender
 from cf_recommender import CollaborativeRecommender
+from mf_sgd import MF_SGD_User_Based
 from sklearn.neighbors import NearestNeighbors
 from mab_cb import mab_on_contentbased
 from mab_cf import mab_on_collabfilter
@@ -27,16 +28,17 @@ class MovieRecommenderApp:
         self.content_recommender = None
         self.collaborative_recommender = None
         self.utility_matrix = None
+        self.sgd_model = None
         self.content_initialized = False
         self.collaborative_initialized = False
         self.director_initialized = False
+        self.sgd_initialized = False
         self.movies_with_abstracts_path = "./dataset/movies_with_abstracts_complete.csv"  #! Cambiare path con uno dinamico
         self._load_basic_data()
 
     def _load_basic_data(self) -> None:
         try:
             self.df_movies, self.df_ratings, self.df_tags = load_movielens_data(self.data_dir)
-            self
             self.utility_matrix = self.df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
             self.df_with_abstracts = pd.read_csv(self.movies_with_abstracts_path, dtype={"imdbId": str, "tmdbId": str})
         except Exception as e:
@@ -68,6 +70,10 @@ class MovieRecommenderApp:
             self.collaborative_initialized = True
         except Exception as e:
             print(f"Errore nell'inizializzazione del collaborative recommender: {e}")
+
+    def initialize_sgd_recommender(self) -> None:
+        self.sgd_model = MF_SGD_User_Based.load_model("models/mf_model_n200_lr0.001_lambda0.0001_norm.pkl")
+        self.sgd_initialized = True
 
     def check_director_recommender(self) -> bool:
         if os.path.exists(self.movies_with_abstracts_path):
@@ -141,6 +147,16 @@ class MovieRecommenderApp:
         if not self.check_director_recommender():
             return "Director recommender not available."
         return recommend_films_with_actors(director, max_actors=max_actors, movie_title_selected=False)
+    
+    def run_sgd_recommendations(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
+        if not self.sgd_initialized:
+            self.initialize_sgd_recommender()
+            if not self.sgd_initialized:
+                return pd.DataFrame()
+        return self.sgd_model.get_recommendations(matrix=self.utility_matrix, user_id=user_id).head(top_n)
+    
+    def run_sgd_mab_recommender(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
+        return mab_on_sgd(self.df_ratings, self.df_movies, user_id)[:top_n]
 
 
 app_instance = MovieRecommenderApp()
@@ -332,6 +348,41 @@ def director_recommendations_name():
     max_actors = data.get("max_actors", 5)
     results = app_instance.run_director_recommender_by_director(director, max_actors)
     return jsonify({"result": results})
+
+@app.route("/recommend/sgd", methods=["POST"])
+def sgd_recommendations():
+    data = request.get_json()
+    user_id = data.get("user_id", 0)
+    top_n = data.get("top_n", 10)
+
+    if user_id <= 0:
+        return jsonify({"error": True, "message": "User ID must be a positive integer."}), 404
+    
+    if user_id > 610:
+        return jsonify({"error": True, "message": f"User with ID {user_id} not found."}), 404
+    
+    results_ids = app_instance.run_sgd_recommendations(user_id, top_n).index.tolist()
+    results = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"].isin(results_ids)].to_dict(orient="records")
+    json_response = {"userId": user_id, "results": results}
+    return jsonify(json_response)
+
+@app.route("/recommend/sgd_mab", methods=["POST"])
+def sgd_recommendations_mab():
+    data = request.get_json()
+    user_id = data.get("user_id", 0)
+    top_n = data.get("top_n", 10)
+
+    if user_id <= 0:
+        return jsonify({"error": True, "message": "User ID must be a positive integer."}), 404
+    
+    if user_id > 610:
+        return jsonify({"error": True, "message": f"User with ID {user_id} not found."}), 404
+    
+    results_ids = app_instance.run_sgd_mab_recommender(user_id, top_n)
+
+    results = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"].isin(results_ids)].to_dict(orient="records")
+    json_response = {"userId": user_id, "results": results}
+    return jsonify(json_response)
 
 
 @app.route("/predict", methods=["POST"])

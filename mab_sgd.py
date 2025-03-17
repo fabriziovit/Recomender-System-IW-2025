@@ -43,16 +43,17 @@ def _start_rounds_mf_sgd(
         # 1. Recupera il movieId e il titolo del film selezionato
         curr_movie_id: int = df_recommendations.iloc[curr_arm]["movieId"]
         curr_movie_title: str = df_recommendations.iloc[curr_arm]["title"]
-        print(f"\ncurr_selected_arm: {curr_arm}")
-        print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
+        #print(f"\ncurr_selected_arm: {curr_arm}")
+        #print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
 
         # 2. Calcola il reward per il braccio selezionato
         reward = min_max_normalize_values(df_recommendations.iloc[curr_arm]["predicted rating"])
 
+        '''
         print(f"Round {i}:")
         print(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
         print(f"  - Reward: {reward:.3f}")
-
+        '''
         # 3. Aggiorna il bandit con la reward calcolata
         bandit_mab.update(curr_arm, reward)
 
