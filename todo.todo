@@ -1,17 +1,17 @@
 1. Recommendation on abstract + genres [OK]
-2. Recommendation on abstract + director + genres [?]
+2. Recommendation on director [OK]
 3. Metriche per la valutazione del recommender system [Loading...]
-    - RMSE, MAE 
-    - Precision e Recall 
-    - Testare con altre metriche come la cosine
-4. MAB [Loading ... 50%]
-5. Menu o idee simili per la scelta [Loading...]
+    3.1 RMSE, MAE 
+    3.2 Precision e Recall (su KNN)
+4. MAB [OK]
+5. GUI [OK]
 6. Completare DBpedia [OK]
 
 
-# Correzioni
-1. Fare in modo che durante l'apprendimento del modello (delle predizioni), si utilizzino anche i film già visti dall'utente
+# Correzioni:
+1. Fare in modo che durante l'apprendimento del modello (delle predizioni), 
+si utilizzino anche i film già visti dall'utente
 
-# Idee
-1. Implementazione di EpsGreedyMAB con contesto
-2. Implementazione di UCBMAB
+# Note:
+1. E' possibile fare predizioni anche con i metodi  metodi neighborhood-based --> Calcolo RMSE e MAE per questi modelli
+2. Calcolo Precision@K e Recall@K per i metodi neighborhood-based

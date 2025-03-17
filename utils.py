@@ -1,4 +1,5 @@
 import time
+from typing import Union
 import pandas as pd
 import numpy as np
 from scipy.stats import pearsonr
@@ -13,7 +14,7 @@ def load_movielens_data(path: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataF
 
 
 def pearson_distance(x, y, flag: bool = False):
-    """Distanza di Pearson (1 - |correlazione|)"""
+    """Distanza di Pearson (1 - |correlazione|) normalizzata tra 0 e 1"""
     corr, _ = pearsonr(x, y)
     if flag:
         return corr  # Restituisci la correlazione
@@ -21,7 +22,7 @@ def pearson_distance(x, y, flag: bool = False):
 
 
 def hold_out_random(df_ratings: pd.DataFrame, valid_size=0.15, test_size=0.15, random_state=42) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    # 1. Splitto in training e test
+    # 1. Splitt in training e test dataframe
     train_ratings_df, val_test_ratings_df = train_test_split(df_ratings, test_size=valid_size + test_size, random_state=42)
     # 2. Splitto il training in training e validation
     valid_ratings_df, test_ratings_df = train_test_split(val_test_ratings_df, test_size=test_size, random_state=42)
@@ -29,22 +30,19 @@ def hold_out_random(df_ratings: pd.DataFrame, valid_size=0.15, test_size=0.15, r
     return train_ratings_df, valid_ratings_df, test_ratings_df
 
 
-def get_train_valid_test_matrix(df_ratings: pd.DataFrame, all_movies_id: pd.Index, all_user_ids: pd.Index):
-
+def get_train_valid_test_matrix(df_ratings: pd.DataFrame, all_movies_id: pd.Index, all_user_ids: pd.Index) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     # 1. Split dei dati in training, validation e test da ratings
     df_train_ratings, df_valid_ratings, df_test_ratings = hold_out_random(df_ratings)
-
+    # 2. Creo le matrici train, valid e test
     train_matrix: pd.DataFrame = df_train_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
     valid_matrix: pd.DataFrame = df_valid_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
     test_matrix: pd.DataFrame = df_test_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
     print(f"# Train-matrix: {train_matrix.shape}, Valid-matrix: {valid_matrix.shape}, Test-matrix: {test_matrix.shape}")
-
-    # 2. Mi assicuro che le matrici abbiano tutte le colonne (movie_ids)
+    # 3. Mi assicuro che le matrici abbiano tutte le colonne (movie_ids)
     train_matrix = train_matrix.reindex(columns=all_movies_id, fill_value=0.0)
     valid_matrix = valid_matrix.reindex(columns=all_movies_id, fill_value=0.0)
     test_matrix = test_matrix.reindex(columns=all_movies_id, fill_value=0.0)
-
-    # 3. Mi assicuro che le matrici abbiano tutte le righe (user_ids)
+    # 4. Mi assicuro che le matrici abbiano tutte le righe (user_ids)
     train_matrix = train_matrix.reindex(index=all_user_ids, fill_value=0.0)
     valid_matrix = valid_matrix.reindex(index=all_user_ids, fill_value=0.0)
     test_matrix = test_matrix.reindex(index=all_user_ids, fill_value=0.0)
@@ -52,31 +50,28 @@ def get_train_valid_test_matrix(df_ratings: pd.DataFrame, all_movies_id: pd.Inde
     return train_matrix, valid_matrix, test_matrix
 
 
-def compute_mean_form_movie(movie_id: str, df_ratings: pd.DataFrame) -> float:
+def min_max_normalize_mean(values: Union[int, float, pd.Series], min_rating: float = 0.0, max_rating: float = 5.0) -> float:
     """Calcola il rating medio normalizzato per un film"""
-    min_rating_value: float = 0.0
-    max_rating_value: float = 5.0
-    movie_ratings = df_ratings[df_ratings["movieId"] == movie_id]["rating"]
-    if movie_ratings.empty:
-        return 0.0  # Se non ci sono rating, restituisce 0
-    # Calcola il rating medio per il film
-    avg_rating = movie_ratings.mean()
-    # Normalizza il rating medio [0,5] -> [0,1]
-    return (avg_rating - min_rating_value) / (max_rating_value - min_rating_value)
+    if isinstance(values, pd.Series):
+        if values.empty:
+            return 0.0  # Se non ci sono ratings, restituisce 0
+        # Calcola il rating medio per il film
+        avg_rating = values.mean()
+        return (avg_rating - min_rating) / (max_rating - min_rating)
+    elif isinstance(values, (int, float)):  # Se è un singolo valore float
+        return (values - min_rating) / (max_rating - min_rating)
+    else:
+        raise ValueError("min_max_normalize_mean accetta solo int, float o pd.Series.")
 
 
-def compute_hybrid_reward(similarity: float, mean_reward: float, beta: float = 0.5) -> float:
-    # Calcola della reward: combinazione lineare di similarità e rating medio del film selezionato
-    return beta * similarity + (1 - beta) * mean_reward
-
-
-# def pearson_distance_manual(u: np.ndarray, v: np.ndarray, flag: bool = False) -> float:
-#     """Distanza di Pearson (1 - |correlazione|)"""
-#     u_mean = np.mean(u)
-#     v_mean = np.mean(v)
-#     num = np.sum((u - u_mean) * (v - v_mean))  # Numeratore
-#     den = np.sqrt(np.sum((u - u_mean) ** 2)) * np.sqrt(np.sum((v - v_mean) ** 2))  # Denominatore
-#     correlation = num / den if den != 0 else 0  # Correlazione di Pearson
-#     if flag:
-#         return correlation  # Restituisci la correlazione
-#     return 1 - abs(correlation)  # Restituisci la distanza, che è 1 - |correlazione|
+def min_max_normalize_values(values: Union[int, float, pd.Series], min_rating: float = 0.0, max_rating: float = 5.0) -> float:
+    """Normalizza i rating tra 0 e 1. Funziona sia per singoli valori float che per pd.Series, restituendo sempre un float."""
+    if isinstance(values, pd.Series):
+        if values.empty:
+            return 0.0  # Se non ci sono ratings, restituisco 0
+        normalized_ratings = (values - min_rating) / (max_rating - min_rating)
+        return min_max_normalize_mean(normalized_ratings)  # Ritorna un singolo valore float
+    elif isinstance(values, (int, float)):  # Se è un singolo valore float
+        return (values - min_rating) / (max_rating - min_rating)
+    else:
+        raise ValueError("compute_normalized_ratings accetta solo int, float o pd.Series.")

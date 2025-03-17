@@ -102,8 +102,8 @@ class MF_SGD_User_Based:
         if user_id not in self.user_ids_map:
             raise ValueError(f"User ID {user_id} non trovato nel training set.")
         predicted_ratings_list = []
-        user_index = self.user_ids_map[user_id]
         item_ids = matrix.columns  # All movie ids from the matrix
+        user_index = self.user_ids_map[user_id]
         seen_movies_ids = matrix.loc[user_id][matrix.loc[user_id] > 0].index.tolist()  # Film visti dall'utente
         for item_id in item_ids:
             if exclude and item_id in seen_movies_ids:
