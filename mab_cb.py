@@ -62,8 +62,8 @@ def _start_rounds(
         curr_movie_id: int = df_recommendations.loc[curr_idx_embedd]["movieId"]
         curr_movie_title: str = df_recommendations.loc[curr_idx_embedd]["title"]
 
-        print(f"\ncurr_selected_arm: {curr_selected_arm}")
-        print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
+        #print(f"\ncurr_selected_arm: {curr_selected_arm}")
+        #print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
 
         # 1. Ottieni il punteggio di similarità per il film selezionato (dal vettore sim_scores)
         curr_similarity: float = sim_scores[curr_selected_arm]
@@ -81,11 +81,11 @@ def _start_rounds(
         bandit_mab.update(curr_selected_arm, reward)
 
 
-def mab_on_contentbased(movie_title: str, df_ratings: pd.DataFrame, num_round: int = 1_000, N: int = 20) -> list:
+def mab_on_contentbased(movie_title: str, df_ratings: pd.DataFrame, num_round: int = 1_000, N: int = 20, recommender: ContentBasedRecommender= None) -> list:
 
     # 0. Carica il dataset per il content-based recommender
-    df = pd.read_csv("dataset/movies_with_abstracts_complete.csv", on_bad_lines="warn")
-    recommender = ContentBasedRecommender(df, abstract_col="dbpedia_abstract", title_col="title", genres_col="genres")
+    #df = pd.read_csv("dataset/movies_with_abstracts_complete.csv", on_bad_lines="warn")
+    recommender = recommender
 
     # 1. Ottieni l'indice del film selezionato
     curr_movie_id = recommender.df[recommender.df["title"] == movie_title]["movieId"]

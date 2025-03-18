@@ -18,9 +18,6 @@ class ContentBasedRecommender:
     def __init__(
         self,
         df: pd.DataFrame,
-        abstract_col: str = "dbpedia_abstract",
-        title_col: str = "title",
-        genres_col: str = "genres",
         vector_size: int = 100,
         window: int = 5,
         min_count: int = 2,
@@ -29,9 +26,6 @@ class ContentBasedRecommender:
         Inizializza il ContentBasedRecommender.
         """
         self.df = df
-        self.abstract_col = abstract_col
-        self.title_col = title_col
-        self.genres_col = genres_col
 
         self._preprocess_all(vector_size=vector_size, window=window, min_count=min_count)
 
@@ -46,7 +40,7 @@ class ContentBasedRecommender:
         """
         self.tokenized_abstracts = []
         # Lista di liste, dove ogni lista interna contiene i tokens di un certo abstract
-        self.tokenized_abstracts = [[word for word in simple_preprocess(text) if word not in STOPWORDS] for text in self.df[self.abstract_col]]
+        self.tokenized_abstracts = [[word for word in simple_preprocess(text) if word not in STOPWORDS] for text in self.df["dbpedia_abstract"]]
 
     def _calculate_embeddings(self) -> None:
         """
@@ -62,6 +56,7 @@ class ContentBasedRecommender:
             else:
                 doc_vector = np.zeros(self.model.vector_size)
             embeddings.append(doc_vector)
+        print("End of _calculate_embeddings")
         self.embeddings = np.array(embeddings)
 
     def _parse_genres(self) -> None:
@@ -71,7 +66,7 @@ class ContentBasedRecommender:
         Se la stringa dei generi è vuota, viene aggiunto un set vuoto.
         """
         self.genres_lists = []
-        for genres_str in self.df[self.genres_col]:
+        for genres_str in self.df["genres"]:
             if genres_str.strip() == "":
                 self.genres_lists.append(set())  # Set vuoto se non ci sono generi
             else:
@@ -79,8 +74,8 @@ class ContentBasedRecommender:
 
     def _preprocess_all(self, vector_size: int, window: int, min_count: int) -> None:
         # Gestione dei valori mancanti per abstract e generi, riempiendoli con stringhe vuote
-        self.df[self.abstract_col] = self.df[self.abstract_col].fillna("")
-        self.df[self.genres_col] = self.df[self.genres_col].fillna("")
+        self.df["dbpedia_abstract"] = self.df["dbpedia_abstract"].fillna("")
+        self.df["genres"] = self.df["genres"].fillna("")
 
         # Preprocessa il testo degli abstract: tokenizzazione, rimozione stop words e punteggiatura
         self._preprocess_text()
@@ -112,7 +107,7 @@ class ContentBasedRecommender:
 
     def get_idx(self, movie_title: str) -> int:
         # Ottieni l'indice del film dato nel DataFrame
-        return self.df[self.df[self.title_col] == movie_title].index[0]
+        return self.df[self.df["title"] == movie_title].index[0]
 
     def _compute_genres_similarity(self, idx: int) -> np.ndarray:
         # Calcola la similarità basata sui generi (Jaccard similarity)
@@ -143,7 +138,7 @@ class ContentBasedRecommender:
         Utilizza una combinazione di similarità basata sull'abstract (cosine similarity sui document embeddings)
         e similarità basata sui generi (Jaccard similarity).
         """
-        if movie_title not in self.df[self.title_col].values:
+        if movie_title not in self.df["title"].values:
             return []  # Restituisce lista vuota se il film non è nel dataset
 
         # Ottieni l'indice del film dato nel DataFrame
@@ -163,23 +158,3 @@ class ContentBasedRecommender:
 
         # Restituisce il dataframe ordinato per scores dei film raccomandati
         return self.df.iloc[rec_indices]
-
-
-def main():
-    # Caricamento dei dati da CSV (assicurati che 'test.csv' sia nel path corretto o cambia il path)
-    df = pd.read_csv("test.csv", on_bad_lines="warn")
-
-    # Creazione dell'istanza del recommender system
-    recommender = ContentBasedRecommender(df)
-
-    # Test della raccomandazione
-    movie_to_recommend = "Toy Story 2 (1999)"
-    recommended_movies = recommender.recommend(movie_to_recommend)["title"].tolist()
-
-    print(f"\nFilm consigliati simili a '{movie_to_recommend}':")
-    for movie in recommended_movies:
-        print(f"- {movie}")
-
-
-if __name__ == "__main__":
-    main()
