@@ -29,6 +29,11 @@ def _get_topk_movies(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame)
     return topk
 
 
+def get_reward(predicted_rating, selections):
+    """Calcola la reward penalizzando i film selezionati troppe volte"""
+    return predicted_rating / (1 + np.log(1 + selections))
+
+
 def _start_rounds_mf_sgd(
     num_rounds: int,
     bandit_mab: EpsGreedyMAB,
@@ -43,17 +48,23 @@ def _start_rounds_mf_sgd(
         # 1. Recupera il movieId e il titolo del film selezionato
         curr_movie_id: int = df_recommendations.iloc[curr_arm]["movieId"]
         curr_movie_title: str = df_recommendations.iloc[curr_arm]["title"]
-        #print(f"\ncurr_selected_arm: {curr_arm}")
-        #print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
+        # print(f"\ncurr_selected_arm: {curr_arm}")
+        # print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
 
         # 2. Calcola il reward per il braccio selezionato
-        reward = min_max_normalize_values(df_recommendations.iloc[curr_arm]["predicted rating"])
+        # reward = min_max_normalize_values(df_recommendations.iloc[curr_arm]["predicted rating"])
+        predicted_rating: float = df_recommendations.iloc[curr_arm]["predicted rating"]
+        curr_arm_clicks: int = bandit_mab.get_clicks_for_arm()[curr_arm]
 
-        '''
+        predicted_rating: float = min_max_normalize_values(predicted_rating)
+        curr_arm_clicks: float = min_max_normalize_values(curr_arm_clicks, min(bandit_mab.get_clicks_for_arm()), max(bandit_mab.get_clicks_for_arm()))
+        reward: float = get_reward(predicted_rating, curr_arm_clicks)
+
+        """
         print(f"Round {i}:")
         print(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
         print(f"  - Reward: {reward:.3f}")
-        '''
+        """
         # 3. Aggiorna il bandit con la reward calcolata
         bandit_mab.update(curr_arm, reward)
 
