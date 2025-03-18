@@ -126,6 +126,43 @@ class CollaborativeRecommender:
 
         return mean_movies_df.merge(df_movies, how="left", on="movieId")
 
+    def get_user_predictions(self, df_ratings: pd.DataFrame, sim_scores: pd.Series, user_id: int, curr_movie_id: int) -> float:
+
+        # Converti sim_scores in DataFrame per operazioni vettorializzate
+        df_sim_scores = sim_scores.rename("similarity").reset_index()
+        df_sim_scores.rename(columns={"index": "userId"}, inplace=True)
+
+        # 1. Calcolo la media delle valutazioni per ogni utente
+        similars_means: pd.Series = df_ratings.groupby("userId")["rating"].mean().rename("user_mean")
+        df_ratings_with_mean: pd.DataFrame = df_ratings.merge(similars_means, on="userId")
+
+        # 2. Calcolo il numero di valutazioni per ogni utente
+        user_ratings_count = df_ratings.groupby("userId")["rating"].count().rename("num_ratings")
+
+        # 2. Seleziono le valutazioni degli utenti simili per il film selezionato
+        ratings_similar_df = df_ratings_with_mean[df_ratings_with_mean["movieId"] == curr_movie_id].merge(df_sim_scores, on="userId", how="inner")
+
+        # 3. Aggiungo il numero di valutazioni per ogni utente
+        ratings_similar_df = ratings_similar_df.merge(user_ratings_count, on="userId")
+
+        # 4. Aggiungo la similarità normalizzata
+        ratings_similar_df["adjusted_similarity"] = ratings_similar_df["similarity"] / (ratings_similar_df["num_ratings"] + 1)
+
+        if not ratings_similar_df.empty:
+            # Centro le valutazioni sottraendo la media dell'utente
+            ratings_similar_df["mean_centered_rating"] = ratings_similar_df["rating"] - ratings_similar_df["user_mean"]
+
+            # Calcolo la media pesata delle valutazioni centrate
+            weighted_sum = np.dot(ratings_similar_df["mean_centered_rating"], ratings_similar_df["adjusted_similarity"])
+            prediction_mean_centered = weighted_sum / ratings_similar_df["adjusted_similarity"].sum()
+
+            # Riporto la predizione alla scala originale sommando la media dell'utente target
+            user_target_mean = similars_means.get(user_id, df_ratings["rating"].mean())  # Se l'utente target non ha media, uso la media globale
+            final_prediction = prediction_mean_centered + user_target_mean
+            return final_prediction
+        else:
+            raise ValueError("Nessun utente simile ha valutato il film selezionato")
+
 
 def main():
     # Carica il dataset MovieLens

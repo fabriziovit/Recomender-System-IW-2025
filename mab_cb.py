@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from cb_recommender import ContentBasedRecommender
 from eps_mab import EpsGreedyMAB
-from utils import load_movielens_data, pearson_distance, min_max_normalize_mean
+from utils import load_movielens_data, min_max_normalize
 
 
 def _print_info_rounds(i: int, curr_arm: int, curr_idx: int, curr_movie_id: int, curr_movie_title: str, curr_sim: float, curr_mean: float, reward: float) -> None:
@@ -37,7 +37,7 @@ def _get_topk_movies(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame,
     return topk
 
 
-def compute_hybrid_reward_content(similarity: float, mean_reward: float, beta: float = 0.5) -> float:
+def compute_reward(similarity: float, mean_reward: float, beta: float = 0.5) -> float:
     """Calcola della reward: combinazione lineare di similarità e rating medio del film selezionato"""
     return beta * similarity + (1 - beta) * mean_reward
 
@@ -56,6 +56,8 @@ def _start_rounds(
         # 0. Il bandit seleziona un braccio
         curr_selected_arm: int = bandit_mab.play()
 
+        bandit_mab.linear_epsilon_decay(num_round=i, decay=0.001)
+
         # Content-Based: Recupera l'indice dell'embedding del film selezionato dal bandit
         curr_idx_embedd: int = indexes_embedd_of_similiar[curr_selected_arm]
         # Recupera il movieId e il titolo del film selezionato
@@ -68,20 +70,20 @@ def _start_rounds(
         # 1. Ottieni il punteggio di similarità per il film selezionato (dal vettore sim_scores)
         curr_similarity: float = sim_scores[curr_selected_arm]
 
-        # 2. Calcola la media normalizzata per il film selezionato
+        # 2. Calcola la media delle valutazioni per il film selezionato
         movie_ratings: pd.Series = df_ratings[df_ratings["movieId"] == curr_movie_id]["rating"]
-        curr_mean_reward: float = min_max_normalize_mean(movie_ratings)
+        curr_mean_reward: float = min_max_normalize(movie_ratings, min_val=0.5, max_val=5.0)
 
         # 3. Calcola la hybrid reward
-        reward = compute_hybrid_reward_content(curr_similarity, curr_mean_reward, beta=0.8)
+        reward = compute_reward(curr_similarity, curr_mean_reward, beta=0.8)
 
-        # _print_info_rounds(i, curr_selected_arm, curr_idx_embedd, curr_movie_id, curr_movie_title, curr_similarity, curr_mean_reward, reward)
+        _print_info_rounds(i, curr_selected_arm, curr_idx_embedd, curr_movie_id, curr_movie_title, curr_similarity, curr_mean_reward, reward)
 
         # 4. Aggiorna il bandit con la reward calcolata
         bandit_mab.update(curr_selected_arm, reward)
 
 
-def mab_on_contentbased(movie_title: str, df_ratings: pd.DataFrame, num_round: int = 1_000, N: int = 20) -> list:
+def mab_on_contentbased(movie_title: str, df_ratings: pd.DataFrame, num_rounds: int = 500, N: int = 20) -> list:
 
     # 0. Carica il dataset per il content-based recommender
     df = pd.read_csv("dataset/movies_with_abstracts_complete.csv", on_bad_lines="warn")
@@ -104,9 +106,7 @@ def mab_on_contentbased(movie_title: str, df_ratings: pd.DataFrame, num_round: i
     bandit_mab = EpsGreedyMAB(n_arms=N, epsilon=0.1, Q0=0.0)
 
     # Simulazione del gioco
-    _start_rounds(num_round, bandit_mab, df_recommendations, indexes_of_embedd, sim_scores_items, df_ratings)
-
-    # _print_final_stats(bandit_mab, df_recommendations, indexes_of_embedd)
+    _start_rounds(num_rounds, bandit_mab, df_recommendations, indexes_of_embedd, sim_scores_items, df_ratings)
 
     return _get_topk_movies(bandit_mab, df_recommendations, indexes_of_embedd)
 
@@ -121,7 +121,7 @@ def main():
     temp_movie_id = df_movies[df_movies["title"] == temp_movie_title].index[0]
 
     # MAB on content-based
-    print(mab_on_contentbased(temp_movie_title, df_ratings, num_round=1_000, N=20))
+    print(mab_on_contentbased(temp_movie_title, df_ratings, num_rounds=500, N=20))
 
 
 if __name__ == "__main__":

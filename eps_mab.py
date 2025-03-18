@@ -70,6 +70,23 @@ class EpsGreedyMAB(MAB):
     def get_clicks_for_arm(self) -> int:
         return self._clicks
 
+    def get_epsilon(self) -> float:
+        return self._epsilon
+
+    def set_epsilon(self, epsilon: float) -> None:
+        if not (0 <= epsilon <= 1):
+            raise ValueError("epsilon must be in [0,1]")
+        if not isinstance(epsilon, float):
+            raise TypeError("epsilon must be float")
+        self._epsilon = epsilon
+
+    def linear_epsilon_decay(self, num_round: int, decay: float = 0.001) -> None:
+        initial_epsilon = self.get_epsilon()
+        epsilon = initial_epsilon * (1 - (decay * num_round))
+        print(f"epsilon: {epsilon}")
+        if epsilon > 0.1:  # Epsilon minimo
+            self.set_epsilon(epsilon)
+
     def get_top_n(self) -> list[tuple[int, float]]:
         # Creiamo una lista di tuple (indice, Q-value)
         qvalues_with_indices = list(zip(range(self.get_narms()), self.get_qvalues()))

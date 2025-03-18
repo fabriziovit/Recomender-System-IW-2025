@@ -1,4 +1,3 @@
-import time
 from typing import Union
 import pandas as pd
 import numpy as np
@@ -50,32 +49,19 @@ def get_train_valid_test_matrix(df_ratings: pd.DataFrame, all_movies_id: pd.Inde
     return train_matrix, valid_matrix, test_matrix
 
 
-def min_max_normalize_mean(values: Union[int, float, pd.Series], min_val: float = 0.0, max_val: float = 5.0) -> float:
-    """Calcola il rating medio normalizzato per un film"""
+def min_max_normalize(values: Union[int, float, pd.Series], min_val: float = None, max_val: float = None) -> float:
+    """Normalizza i valori tra 0 e 1"""
+    if min_val is None or max_val is None:
+        raise ValueError("min_max_normalize richiede min_val e max_val.")
     if min_val == max_val:
         return 0.0  # Se max e min sono uguali, restituisco 0
     if isinstance(values, pd.Series):
         if values.empty:
             return 0.0  # Se non ci sono ratings, restituisce 0
-        # Calcola il rating medio per il film
+        # Se ci sono più valori, calcola la media
         avg_val = values.mean()
         return (avg_val - min_val) / (max_val - min_val)
     elif isinstance(values, (int, float)):  # Se è un singolo valore float
         return (values - min_val) / (max_val - min_val)
     else:
         raise ValueError("min_max_normalize_mean accetta solo int, float o pd.Series.")
-
-
-def min_max_normalize_values(values: Union[int, float, pd.Series], min_val: float = 0.0, max_val: float = 5.0) -> float:
-    """Normalizza i rating tra 0 e 1. Funziona sia per singoli valori float che per pd.Series, restituendo sempre un float."""
-    if max_val == min_val:
-        return 0.0  # Se max e min sono uguali, restituisco 0
-    if isinstance(values, pd.Series):
-        if values.empty:
-            return 0.0  # Se non ci sono ratings, restituisco 0
-        normalized_ratings = (values - min_val) / (max_val - min_val)
-        return min_max_normalize_mean(normalized_ratings)  # Ritorna un singolo valore float
-    elif isinstance(values, (int, float)):  # Se è un singolo valore float
-        return (values - min_val) / (max_val - min_val)
-    else:
-        raise ValueError("min_max_normalize_values accetta solo int, float o pd.Series.")
