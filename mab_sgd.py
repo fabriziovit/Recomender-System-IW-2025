@@ -61,14 +61,14 @@ def _start_rounds_mf_sgd(
         # 3. Normalizzazione dei valori per la reward
         predicted_rating: float = min_max_normalize(predicted_rating, min_val=0.5, max_val=5.0)
         curr_arm_clicks: float = min_max_normalize(curr_arm_clicks, min(bandit_mab.get_clicks_for_arm()), max(bandit_mab.get_clicks_for_arm()))
-    
+
         reward: float = compute_reward(predicted_rating, curr_arm_clicks)
 
         # Aggiorna il bandit con la reward calcolata
         bandit_mab.update(curr_arm, reward)
 
 
-def mab_on_sgd(df_ratings: pd.DataFrame, df_movies: pd.DataFrame, user_id: int, num_rounds: int = 500, N: int = 20) -> list:
+def mab_on_sgd(df_ratings: pd.DataFrame, df_movies: pd.DataFrame, user_id: int, num_rounds: int = 1000, N: int = 20) -> list:
     # 1. Crea la utility matrix
     utility_matrix = df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
 
@@ -104,7 +104,7 @@ def main():
     temp_user_id = 1
 
     # Mab on SGD
-    print(mab_on_sgd(df_ratings, df_movies, temp_user_id, num_rounds=500, N=20))
+    print(mab_on_sgd(df_ratings, df_movies, temp_user_id, num_rounds=1000, N=20))
 
 
 if __name__ == "__main__":

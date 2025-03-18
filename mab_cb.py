@@ -56,16 +56,14 @@ def _start_rounds(
         # 0. Il bandit seleziona un braccio
         curr_selected_arm: int = bandit_mab.play()
 
-        bandit_mab.linear_epsilon_decay(num_round=i, decay=0.001)
-
         # Content-Based: Recupera l'indice dell'embedding del film selezionato dal bandit
         curr_idx_embedd: int = indexes_embedd_of_similiar[curr_selected_arm]
         # Recupera il movieId e il titolo del film selezionato
         curr_movie_id: int = df_recommendations.loc[curr_idx_embedd]["movieId"]
         curr_movie_title: str = df_recommendations.loc[curr_idx_embedd]["title"]
 
-        #print(f"\ncurr_selected_arm: {curr_selected_arm}")
-        #print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
+        # print(f"\ncurr_selected_arm: {curr_selected_arm}")
+        # print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
 
         # 1. Ottieni il punteggio di similarità per il film selezionato (dal vettore sim_scores)
         curr_similarity: float = sim_scores[curr_selected_arm]
@@ -83,14 +81,9 @@ def _start_rounds(
         bandit_mab.update(curr_selected_arm, reward)
 
 
-<<<<<<< HEAD
-def mab_on_contentbased(movie_title: str, df_ratings: pd.DataFrame, num_rounds: int = 500, N: int = 20) -> list:
-=======
-def mab_on_contentbased(movie_title: str, df_ratings: pd.DataFrame, num_round: int = 1_000, N: int = 20, recommender: ContentBasedRecommender= None) -> list:
->>>>>>> 79c6424616b514eb989ed8ff7d9f7450ed488cff
-
+def mab_on_contentbased(movie_title: str, df_ratings: pd.DataFrame, num_rounds: int = 1_000, N: int = 20, recommender: ContentBasedRecommender = None) -> list:
     # 0. Carica il dataset per il content-based recommender
-    #df = pd.read_csv("dataset/movies_with_abstracts_complete.csv", on_bad_lines="warn")
+    # df = pd.read_csv("dataset/movies_with_abstracts_complete.csv", on_bad_lines="warn")
     recommender = recommender
 
     # 1. Ottieni l'indice del film selezionato
@@ -125,7 +118,7 @@ def main():
     temp_movie_id = df_movies[df_movies["title"] == temp_movie_title].index[0]
 
     # MAB on content-based
-    print(mab_on_contentbased(temp_movie_title, df_ratings, num_rounds=500, N=20))
+    print(mab_on_contentbased(temp_movie_title, df_ratings, num_rounds=1000, N=20))
 
 
 if __name__ == "__main__":

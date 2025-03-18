@@ -83,7 +83,7 @@ def _mab_on_collabfilter_item(
     movie_id: int,
     df_ratings: pd.DataFrame,
     df_movies: pd.DataFrame,
-    num_rounds: int = 500,
+    num_rounds: int = 1000,
     NN: int = 20,
 ) -> None:
 
@@ -156,7 +156,7 @@ def _mab_on_collabfilter_user(
     user_id: int,
     df_ratings: pd.DataFrame,
     df_movies: pd.DataFrame,
-    num_rounds: int = 500,
+    num_rounds: int = 1000,
     NN: int = 20,
 ) -> None:
 
@@ -186,7 +186,7 @@ def mab_on_collabfilter(
     df_movies: pd.DataFrame,
     movie_id: Optional[int] = None,
     user_id: Optional[int] = None,
-    num_rounds: int = 500,
+    num_rounds: int = 1000,
     N: int = 20,
 ) -> list:
 
@@ -240,7 +240,7 @@ def main():
     # print(mab_on_collabfilter(df_ratings, df_movies, temp_movie_id, None, N=20))
 
     # User-based collaborative filtering
-    print(mab_on_collabfilter(df_ratings, df_movies, None, temp_user_id, num_rounds=500, N=20))
+    print(mab_on_collabfilter(df_ratings, df_movies, None, temp_user_id, num_rounds=1000, N=20))
 
 
 if __name__ == "__main__":

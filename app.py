@@ -28,7 +28,7 @@ class MovieRecommenderApp:
         self.content_recommender = None
         self.collaborative_recommender = None
         self.utility_matrix = None
-        self.sgd_model = None
+        self.sgd_model: MF_SGD_User_Based = None
         self.content_initialized = False
         self.collaborative_initialized = False
         self.director_initialized = False
@@ -151,14 +151,14 @@ class MovieRecommenderApp:
         if not self.check_director_recommender():
             return "Director recommender not available."
         return recommend_films_with_actors(director, max_actors=max_actors, movie_title_selected=False)
-    
+
     def run_sgd_recommendations(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.sgd_initialized:
             self.initialize_sgd_recommender()
             if not self.sgd_initialized:
                 return pd.DataFrame()
         return self.sgd_model.get_recommendations(matrix=self.utility_matrix, user_id=user_id).head(top_n)
-    
+
     def run_sgd_mab_recommender(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
         return mab_on_sgd(self.df_ratings, self.df_movies, user_id)[:top_n]
 
@@ -188,6 +188,7 @@ def movie_details(movie_id):
     details = app_instance.show_movie_details(movie_id)
     return jsonify(details)
 
+
 @app.route("/user/<int:user_id>", methods=["GET"])
 def user_movies_list(user_id):
     if user_id <= 0:
@@ -207,6 +208,7 @@ def user_movies_list(user_id):
 
 
 #####Recommendation Endpoints#####
+
 
 @app.route("/recommend/content", methods=["POST"])
 def content_recommendations():
@@ -242,7 +244,7 @@ def content_recommendations_mab():
     for movie_id in results_ids:
         movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
         if not movie_row.empty:
-        # Converti il DataFrame row in un dict
+            # Converti il DataFrame row in un dict
             movie_dict = movie_row.iloc[0].to_dict()
             # Converti tutti i valori NumPy in tipi Python standard
             ordered_results.append({k: v.item() if isinstance(v, np.number) else v for k, v in movie_dict.items()})
@@ -304,11 +306,11 @@ def item_recommendations_mab():
 
     # Ottieni le raccomandazioni
     results_ids = app_instance.run_collaborative_item_recommender_mab(movie_id, top_n)
-    
+
     # Converto results_ids in lista di interi Python standard se è un array NumPy
     if isinstance(results_ids, np.ndarray):
         results_ids = results_ids.tolist()
-    
+
     ordered_results = []
 
     # Itera attraverso gli ID nell'ordine originale
@@ -322,14 +324,12 @@ def item_recommendations_mab():
 
     # Crea la risposta con il film originale e le raccomandazioni
     response = {
-        "original_movie": {
-            "id": movie_id if not isinstance(movie_id, np.number) else movie_id.item(), 
-            "title": original_movie.get("title", "Unknown")
-        }, 
-        "recommendations": ordered_results
+        "original_movie": {"id": movie_id if not isinstance(movie_id, np.number) else movie_id.item(), "title": original_movie.get("title", "Unknown")},
+        "recommendations": ordered_results,
     }
 
     return jsonify(response)
+
 
 @app.route("/recommend/user", methods=["POST"])
 def user_recommendations():
@@ -372,7 +372,7 @@ def user_recommendations_mab():
     for movie_id in results_ids:
         movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
         if not movie_row.empty:
-        # Converti il DataFrame row in un dict
+            # Converti il DataFrame row in un dict
             movie_dict = movie_row.iloc[0].to_dict()
             # Converti tutti i valori NumPy in tipi Python standard
             ordered_results.append({k: v.item() if isinstance(v, np.number) else v for k, v in movie_dict.items()})
@@ -413,6 +413,7 @@ def director_recommendations_name():
     results = app_instance.run_director_recommender_by_director(director, max_actors)
     return jsonify({"result": results})
 
+
 @app.route("/recommend/sgd", methods=["POST"])
 def sgd_recommendations():
     data = request.get_json()
@@ -421,10 +422,10 @@ def sgd_recommendations():
 
     if user_id <= 0:
         return jsonify({"error": True, "message": "User ID must be a positive integer."}), 404
-    
+
     if user_id > 610:
         return jsonify({"error": True, "message": f"User with ID {user_id} not found."}), 404
-    
+
     results_ids = app_instance.run_sgd_recommendations(user_id, top_n).index.tolist()
     ordered_results = []
 
@@ -432,7 +433,7 @@ def sgd_recommendations():
     for movie_id in results_ids:
         movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
         if not movie_row.empty:
-        # Converti il DataFrame row in un dict
+            # Converti il DataFrame row in un dict
             movie_dict = movie_row.iloc[0].to_dict()
             # Converti tutti i valori NumPy in tipi Python standard
             ordered_results.append({k: v.item() if isinstance(v, np.number) else v for k, v in movie_dict.items()})
@@ -440,6 +441,7 @@ def sgd_recommendations():
     results = ordered_results
     json_response = {"userId": user_id, "results": results}
     return jsonify(json_response)
+
 
 @app.route("/recommend/sgd_mab", methods=["POST"])
 def sgd_recommendations_mab():
@@ -449,10 +451,10 @@ def sgd_recommendations_mab():
 
     if user_id <= 0:
         return jsonify({"error": True, "message": "User ID must be a positive integer."}), 404
-    
+
     if user_id > 610:
         return jsonify({"error": True, "message": f"User with ID {user_id} not found."}), 404
-    
+
     results_ids = app_instance.run_sgd_mab_recommender(user_id, top_n)
 
     ordered_results = []
@@ -470,6 +472,7 @@ def sgd_recommendations_mab():
     results = ordered_results
     json_response = {"userId": user_id, "results": results}
     return jsonify(json_response)
+
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -498,7 +501,8 @@ def predict():
         movie["prediction_rating"] = ratings[ratings["userId"] == user_id]["rating"].values[0]
     else:
         movie["already_rated"] = False
-        movie["prediction_rating"] = np.random.uniform(0, 5) ### Cambiare con funzione per predirre rating
+        df_recoomendations = app_instance.sgd_model.get_recommendations(app_instance.utility_matrix, user_id)
+        movie["prediction_rating"] = df_recoomendations.loc[movie_id].values[0]
 
     movie = movie.to_dict(orient="records")
     json_response = {
