@@ -1416,8 +1416,6 @@
                 return;
               }
 
-              console.log(data);
-
               displayResults('userResults', data, [
                 'id',
                 'title',
@@ -1593,7 +1591,6 @@
               const data = await response.json();
 
               if (!response.ok || data.error) {
-                console.log(data);
                 displayError('predictionResult', data.message || 'Si è verificato un errore durante la richiesta');
                 return;
               }
@@ -1649,7 +1646,7 @@
             }
 
             // Restituisci un'immagine placeholder se non è stato possibile ottenere la copertina
-            return 'https://placehold.co/140x210?text=No+Image+Found&font=roboto';
+            return 'https://placehold.co/140x210/png?text=No+Image+Found&font=roboto';
           }
 
           async function displayResults(elementId, data, columns) {
@@ -1718,7 +1715,7 @@
                 const posterImg = document.createElement('img');
                 posterImg.className = 'movie-poster';
                 posterImg.src =
-                  'https://via.placeholder.com/140x210?text=Loading...';
+                  'https://placehold.co/140x210/png?text=Loading...';
                 posterImg.alt = `${item.title || 'Movie'} poster`;
 
                 // Carica poster in modo asincrono
@@ -1728,7 +1725,7 @@
                   });
                 } else {
                   posterImg.src =
-                    'https://via.placeholder.com/140x210?text=No+Poster';
+                    'https://placehold.co/140x210/png?text=No+Poster';
                 }
 
                 posterContainer.appendChild(posterImg);
@@ -1899,7 +1896,7 @@
 
               const posterImg = document.createElement('img');
               posterImg.className = 'movie-poster';
-              posterImg.src = 'https://via.placeholder.com/140x210?text=Loading...';
+              posterImg.src = 'https://placehold.co/140x210/png?text=Loading...';
               posterImg.alt = `${details.title || 'Movie'} poster`;
 
               // Carica poster in modo asincrono
@@ -1909,7 +1906,7 @@
                 });
               } else {
                 posterImg.src =
-                  'https://via.placeholder.com/140x210?text=No+Poster';
+                  'https://placehold.co/140x210/png?text=No+Poster';
               }
 
               posterContainer.appendChild(posterImg);
