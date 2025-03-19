@@ -148,8 +148,13 @@ class ContentBasedRecommender:
         final_sim = self.compute_similarity_scores(idx=movie_idx)
 
         # Crea una lista di tuple (indice_film, punteggio_similarità)
-        sim_scores = list(enumerate(final_sim))
-        sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)[1 : top_n + 1]  # Esclude il film stesso e prende i top_n
+        temp_sim_scores = list(enumerate(final_sim))
+        temp_sim_scores = sorted(temp_sim_scores, key=lambda x: x[1], reverse=True)[: top_n + 1]  # Esclude il film stesso e prende i top_n
+        sim_scores= []
+
+        for i in temp_sim_scores:
+            if i[0] != movie_idx:
+                sim_scores += [i]
         # print(f"sim_scores: {[ (self.df.iloc[values[0]]['movieId'], values[1]) for values in sim_scores]}")
 
         # Estrai gli indici dei film raccomandati

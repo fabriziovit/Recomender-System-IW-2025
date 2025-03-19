@@ -59,7 +59,7 @@ class MovieRecommenderApp:
         except Exception as e:
             print(f"Errore nell'inizializzazione del content recommender: {e}")
 
-    def initialize_collaborative_recommender(self, n_neighbors: int = 10) -> None:
+    def initialize_collaborative_recommender(self, n_neighbors: int = 20) -> None:
         if self.collaborative_initialized:
             return
         try:
@@ -133,7 +133,11 @@ class MovieRecommenderApp:
         return self.collaborative_recommender.get_item_recommendations(movie_id, self.df_movies).head(top_n)
 
     def run_collaborative_item_recommender_mab(self, movie_id: int, top_n: int = 10) -> pd.DataFrame:
-        return mab_on_collabfilter(self.df_ratings, self.df_movies, movie_id, None)
+        if not self.collaborative_initialized:
+            self.initialize_collaborative_recommender()
+            if not self.collaborative_initialized:
+                return pd.DataFrame()
+        return mab_on_collabfilter(self.df_ratings, self.df_movies, movie_id, None, recommender=self.collaborative_recommender, utility_matrix=self.utility_matrix)[:top_n]
 
     def run_collaborative_user_recommender(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.collaborative_initialized:
@@ -143,7 +147,11 @@ class MovieRecommenderApp:
         return self.collaborative_recommender.get_user_recommendations(user_id, self.utility_matrix, self.df_movies).head(top_n)
 
     def run_collaborative_user_recommender_mab(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
-        return mab_on_collabfilter(self.df_ratings, self.df_movies, None, user_id)[:top_n]
+        if not self.collaborative_initialized:
+            self.initialize_collaborative_recommender()
+            if not self.collaborative_initialized:
+                return pd.DataFrame()
+        return mab_on_collabfilter(self.df_ratings, self.df_movies, None, user_id, recommender=self.collaborative_recommender, utility_matrix=self.utility_matrix)[:top_n]
 
     def run_director_recommender_by_movie(self, movie_id: int, max_actors: int = 5) -> str:
         if not self.check_director_recommender():
@@ -163,7 +171,18 @@ class MovieRecommenderApp:
         return self.sgd_model.get_recommendations(matrix=self.utility_matrix, user_id=user_id).head(top_n)
 
     def run_sgd_mab_recommender(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
+        if not self.sgd_initialized:
+            self.initialize_sgd_recommender()
+            if not self.sgd_initialized:
+                return pd.DataFrame()
         return mab_on_sgd(self.df_ratings, self.df_movies, user_id)[:top_n]
+    
+    def run_sgd_predictions(self, user_id: int, utility_matrix: pd.DataFrame) -> float:
+        if not self.sgd_initialized:
+            self.initialize_sgd_recommender()
+            if not self.sgd_initialized:
+                return 0.0
+        return self.sgd_model.get_recommendations(utility_matrix, user_id)
 
 
 app_instance = MovieRecommenderApp()
@@ -482,7 +501,7 @@ def predict():
     data = request.get_json()
     user_id = data.get("user_id", 0)
     movie_id = data.get("movie_id", 0)
-    movie = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
+    movie = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id].copy()
     movie.reset_index(drop=True, inplace=True)
 
     if len(movie) == 0:
@@ -504,7 +523,7 @@ def predict():
         movie["prediction_rating"] = ratings[ratings["userId"] == user_id]["rating"].values[0]
     else:
         movie["already_rated"] = False
-        df_recoomendations = app_instance.sgd_model.get_recommendations(app_instance.utility_matrix, user_id)
+        df_recoomendations = app_instance.run_sgd_predictions(user_id, app_instance.utility_matrix)
         movie["prediction_rating"] = df_recoomendations.loc[movie_id].values[0]
 
     movie = movie.to_dict(orient="records")
@@ -514,6 +533,43 @@ def predict():
     }
     return jsonify(json_response)
 
+@app.route("/predict_knn", methods=["POST"])
+def predict_knn():
+    data = request.get_json()
+    user_id = data.get("user_id", 0)
+    movie_id = data.get("movie_id", 0)
+    movie = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id].copy()
+    movie.reset_index(drop=True, inplace=True)
+
+    if len(movie) == 0:
+        return jsonify({"error": True, "message": f"Il film con ID {movie_id} non è stato trovato."}), 404
+
+    # Verifica se l'utente esiste
+    if user_id > 610:
+        return jsonify({"error": True, "message": f"L'utente con ID {user_id} non esiste."}), 404
+
+    ratings = app_instance.df_ratings[app_instance.df_ratings["movieId"] == movie_id]
+    if len(ratings) > 0:
+        avg_rating = ratings["rating"].mean()
+        num_ratings = len(ratings)
+        movie["avg_rating"] = avg_rating
+        movie["num_ratings"] = num_ratings
+
+    if ratings[ratings["userId"] == user_id].shape[0] > 0:
+        movie["already_rated"] = True
+        movie["prediction_rating"] = ratings[ratings["userId"] == user_id]["rating"].values[0]
+    else:
+        movie["already_rated"] = False
+        #df_recoomendations = app_istance. ### Da cambiare con funzione per prendere i rating
+        #movie["prediction_rating"] = df_recoomendations.loc[movie_id].values[0]
+        movie["prediction_rating"] = np.random.uniform(0, 5)
+
+    movie = movie.to_dict(orient="records")
+    json_response = {
+        "userId": user_id,
+        "movie": movie,
+    }
+    return jsonify(json_response)
 
 if __name__ == "__main__":
     app.run(debug=True)
