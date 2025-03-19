@@ -37,22 +37,16 @@ class CollaborativeRecommender:
             self.train_matrix = train_matrix
 
         self._transposed_matrix = None
-
         self._is_fitted_on_matrix_T_item = False
-        self.sim_items: pd.Series = None
-        self.dist_items: pd.Series = None
-
         self._is_fitted_on_matrix_user = False
-        self.sim_users: pd.Series = None
-        self.dist_users: pd.Series = None
+
+        self.dist_users = None
 
     def fit_item_model(self, matrix: pd.DataFrame, re_fit: bool = False) -> None:
         """
         Addestra il modello item-based su matrix.T se necessario o se forzato.
         """
         if not self._is_fitted_on_matrix_T_item or re_fit:
-            print(f"self._is_fitted_on_matrix_T_item: {self._is_fitted_on_matrix_T_item}")
-            print(f"re_fit: {re_fit}")
             self._transposed_matrix = matrix.T
             self.model_item.fit(self._transposed_matrix)
             self._is_fitted_on_matrix_T_item = True
@@ -92,11 +86,8 @@ class CollaborativeRecommender:
         similar_movies_list = [all_movie_ids[pos_idx] for pos_idx in pos_indexes.squeeze().tolist()[1:]]
 
         # Salva le distanze item-item per il film specificato
-        self.dist_items = pd.Series(distances.squeeze().tolist()[1:], index=similar_movies_list)
-        # Salva le similarità item-item per il film specificato
-        self.sim_items = pd.Series(1 - self.dist_items, index=similar_movies_list)
-
-        print(f"\nFilm simili trovati per il film: {df_movies.loc[movie_id, 'title']} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self.dist_items.items()]}")
+        dist_items = pd.Series(distances.squeeze().tolist()[1:], index=similar_movies_list)
+        print(f"\nFilm simili trovati per il film: {df_movies.loc[movie_id, 'title']} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in dist_items.items()]}")
 
         # Crea un DataFrame con le raccomandazioni dei film
         return df_movies.loc[similar_movies_list]
@@ -121,8 +112,6 @@ class CollaborativeRecommender:
 
         # Salava le distanze user-user per l'utente specificato
         self.dist_users = pd.Series(distances.squeeze().tolist()[1:], index=similar_users)
-        # Salava le similarità user-user per l'utente specificato
-        self.sim_users = pd.Series(1 - self.dist_users, index=similar_users)
 
         print(f"\nUtenti simili per user {user_id}: {similar_users} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self.dist_users.items()]}")
 
@@ -140,6 +129,7 @@ class CollaborativeRecommender:
 
         return mean_movies_df.merge(df_movies, how="left", on="movieId")
 
+    #! Da commenate
     def get_mean_centered_predictions(self, df_ratings: pd.DataFrame, sim_scores: pd.Series, user_id: int, curr_movie_id: int) -> float:
 
         # Converti sim_scores in DataFrame per operazioni vettorializzate
@@ -177,45 +167,78 @@ class CollaborativeRecommender:
         else:
             raise ValueError("Nessun utente simile ha valutato il film selezionato")
 
+    # ******************************************************************************************************** #
+    def _get_k_similar_users(self, user_id: int, NN: int):
+        """Ottieni utenti simili usando la matrice di similarità."""
+        if self.user_similarity_matrix is None:
+            raise ValueError("User similarity matrix not computed or provided.")
+        if user_id not in self.user_similarity_matrix.index:
+            raise ValueError(f"User ID {user_id} not found in the user similarity matrix.")
 
-def main():
-    # Carica il dataset MovieLens
-    df_movies, df_ratings, df_tags = load_movielens_data("../dataset/")
+        user_similarities = self.user_similarity_matrix.loc[user_id]
+        similar_users = user_similarities.drop(user_id).sort_values(ascending=False)  # Escludi se stesso e ordina
 
-    # Crea la matrice utenti-film pivot (userId x movieId)
-    utility_matrix = df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
-    print(f"# Numero di utenti totali: {len(utility_matrix.index)}")
-    print(f"# Numero di movies totali: {len(utility_matrix.columns)}")
-    print(f"# Utility ratings-matrix: {utility_matrix.shape}")
+        similar_users = similar_users.head(NN)  # Prendi solo i primi NN utenti simili
+        return list(similar_users.items())  # Restituisci lista di (user_id, similarity) per l'utenete target
 
-    NN = 10  # Numero di vicini da considerare
-    K = 10  # Numero di raccomandazioni da restituire
+    def _predict_rating(self, user_id: int, movie_id: int, NN: int) -> float:
+        """Predice il rating per un utente e un film usando il training set e similarità utente-utente pre-calcolata (Vettorizzata)."""
+        if self.user_similarity_matrix is None or self.train_matrix is None:
+            raise ValueError("User similarity matrix or train matrix not provided.")
+        if user_id not in self.train_matrix.index or movie_id not in self.train_matrix.columns:
+            raise ValueError("User ID or Movie ID not found in the train matrix.")
 
-    # Inizializza il modello NearestNeighbors con metrica di correlazione di Pearson
-    knn_model_pearson_item = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=NN, n_jobs=-1)
-    knn_model_pearson_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=NN, n_jobs=-1)
+        similar_users_tlp: tuple = self._get_k_similar_users(user_id, NN=NN)
+        if not similar_users_tlp:
+            raise ValueError("No similar users found.")  # Se non ci sono utenti simili, non posso fare predizioni
 
-    # Istanzia il Recommender con il modello KNN
-    recomm = CollaborativeRecommender(knn_model_pearson_item, knn_model_pearson_user)
-    recomm.fit_user_model(utility_matrix, re_fit=True)
-    recomm.fit_item_model(utility_matrix, re_fit=True)
+        similar_user_ids = [uid for uid, sim in similar_users_tlp]  # Estrai solo gli user_id simili
+        similarities = np.array([sim for uid, sim in similar_users_tlp])  # Estrai le similarità come array NumPy
 
-    # Esempio di utilizzo dei metodi di raccomandazione:
-    # temp_movie_id = 4306
-    # print("Raccomandazioni item-based:")
-    # print(recomm.get_item_recommendations(temp_movie_id, utility_matrix, df_movies).head(K), "\n")
+        # Accedi ai rating gli utenti simili per il film specificato
+        similar_users_ratings = self.train_matrix.loc[similar_user_ids, movie_id].values  # Ottieni come array NumPy
 
-    temp_user_id = 406
+        # Crea una maschera booleana per i rating validi (> 0.0)
+        valid_mask = similar_users_ratings > 0.0
 
-    print("Raccomandazioni user-based:")
-    print(recomm.get_user_recommendations(temp_user_id, utility_matrix, df_movies).head(K), "\n")
+        if np.any(valid_mask):  # Verifica se ci sono rating validi
+            valid_similarities = similarities[valid_mask]  # Filtra similarità corrispondenti ai rating validi
+            valid_ratings = similar_users_ratings[valid_mask]  # Filtra rating validi
 
-    # print("Raccomandazioni ibride:")
-    # print(recomm.hybrid_recommender(user_id=temp_user_id, matrix=matrix, df_movies=df_movies, n_recs=10, refit=False), "\n")
+            weighted_sum = np.sum(valid_similarities * valid_ratings)  # Calcola la somma pesata in modo vettorizzato
+            similarity_sum = np.sum(np.abs(valid_similarities))  # Calcola la somma delle similarità in modo vettorizzato
+            return weighted_sum / similarity_sum
+        else:
+            # Se non ci sono valutazioni valide, restituisco errore
+            user_ratings = self.train_matrix.loc[user_id]
+            valid_ratings = user_ratings[user_ratings > 0.0]
+            if not valid_ratings.empty:
+                return valid_ratings.mean()
+            raise (ValueError("No valid ratings found."))  # Se non ci sono valutazioni valide, restituisco errore
 
-    # print("Raccomandazioni ibride2:")
-    # print(recomm.hybrid_recommender_mean(user_id=temp_user_id, matrix=matrix, df_movies=df_movies, n_recs=10, refit=False), "\n")
+    def _get_predictions_on_train(self, user_id: int, matrix: pd.DataFrame, NN, exclude: bool = False) -> pd.Series:
+        """Calcola le predizioni per un utente specifico."""
+        if user_id not in matrix.index:
+            raise ValueError(f"User ID {user_id} not found in the matrix.")
+        predicted_ratings_list = []
+        print(f"Predizione per utente {user_id}...")
+        seen_movies_ids = self.train_matrix.loc[user_id][self.train_matrix.loc[user_id] > 0.0].index
+        for movie_id in matrix.columns:
+            if exclude and movie_id in seen_movies_ids:
+                continue  # Salta i film già visti
+            predicted_rating = self._predict_rating(user_id, movie_id, NN=NN)
+            predicted_ratings_list.append({"movieId": movie_id, "predicted_rating": predicted_rating})
+        predictions_df = pd.DataFrame(predicted_ratings_list).set_index("movieId").rename(columns={"predicted_rating": "values"})
+        return predictions_df.sort_values("values", ascending=False)
 
+    def compute_predictions_on_train(self, NN) -> dict:
+        """Calcola le predizioni sul training set"""
+        all_user_predictions_evaluation = {}
+        for user_id in self.train_matrix.index:
+            all_user_predictions_evaluation[user_id] = self._get_predictions_on_train(user_id, self.train_matrix, NN, exclude=False)
+        return all_user_predictions_evaluation
 
-if __name__ == "__main__":
-    main()
+    def get_prediction(self, user_id: int, movie_id: int, NN: int = 20) -> pd.Series:
+        """Calcola le predizioni per un utente specifico."""
+        predicted_rating = self._predict_rating(user_id, movie_id, NN=NN)
+        return predicted_rating

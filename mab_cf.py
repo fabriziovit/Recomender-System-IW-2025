@@ -136,7 +136,8 @@ def _start_rounds_cf_user(
         print(f"\ncurr_selected_arm: {curr_arm}")
         print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
 
-        prediction: float = recomm.get_user_prediction(df_ratings, recomm.sim_users, user_id, curr_movie_id)
+        # prediction: float = recomm.get_mean_centered_predictions(df_ratings, recomm.sim_users, user_id, curr_movie_id)
+        prediction: float = recomm.get_prediction(user_id, curr_movie_id, NN=20)
 
         """
         La reward è direttamente proporzionale alla predizione del rating.

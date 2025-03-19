@@ -10,7 +10,7 @@ from sklearn.neighbors import NearestNeighbors
 from mab_cb import mab_on_contentbased
 from mab_cf import mab_on_collabfilter
 from mab_sgd import mab_on_sgd
-from utils import load_movielens_data, pearson_distance
+from utils import load_movielens_data, pearson_distance, compute_user_similarity_matrix
 from director_recommender import recommend_by_movie_id, recommend_films_with_actors
 from fuzzywuzzy import process
 
@@ -28,6 +28,7 @@ class MovieRecommenderApp:
         self.content_recommender = None
         self.collaborative_recommender = None
         self.utility_matrix = None
+        self.similarity_matrix = None
         self.sgd_model: MF_SGD_User_Based = None
         self.content_initialized = False
         self.collaborative_initialized = False
@@ -62,12 +63,14 @@ class MovieRecommenderApp:
         if self.collaborative_initialized:
             return
         try:
+            self.similarity_matrix = compute_user_similarity_matrix(self.utility_matrix)
             knn_model_item = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=n_neighbors, n_jobs=-1)
             knn_model_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=n_neighbors, n_jobs=-1)
-            self.collaborative_recommender = CollaborativeRecommender(knn_model_item, knn_model_user)
+            self.collaborative_recommender = CollaborativeRecommender(knn_model_item, knn_model_user, self.similarity_matrix)
             self.collaborative_recommender.fit_item_model(self.utility_matrix)
             self.collaborative_recommender.fit_user_model(self.utility_matrix)
             self.collaborative_initialized = True
+            print(f"self.similarity_matrix:\n {self.similarity_matrix.shape}")
         except Exception as e:
             print(f"Errore nell'inizializzazione del collaborative recommender: {e}")
 
