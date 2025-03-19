@@ -22,7 +22,7 @@ def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFram
 
 
 def _get_topk_movies(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame) -> None:
-    #print("\nTop film raccomandati:")
+    # print("\nTop film raccomandati:")
     top_n_arms = bandit_mab.get_top_n()
     topk = []
     for i, (curr_selected_arm, q_value) in enumerate(top_n_arms):
@@ -48,7 +48,7 @@ def _start_rounds_cf_item(
     sim_scores: np.ndarray,
     df_ratings: pd.DataFrame,
 ) -> None:
-    
+
     print(f"Numero di bracci nel bandit: {bandit_mab._n_arms}")
     print(f"Numero di righe in df_recommendations: {len(df_recommendations)}")
     print(f"Dimensione di sim_scores: {len(sim_scores)}")
@@ -58,15 +58,15 @@ def _start_rounds_cf_item(
         # 0. Il bandit seleziona un braccio
         curr_arm: int = bandit_mab.play()
 
-        #print(df_recommendations.head(5))
+        # print(df_recommendations.head(5))
 
         # Collaborative: Recupera l'indice dell'embedding del film selezionato dal bandit
         curr_movie_id: int = df_recommendations.iloc[curr_arm]["movieId"]
         curr_movie_title: str = df_recommendations.iloc[curr_arm]["title"]
-        '''
+        """
         print(f"\ncurr_selected_arm: {curr_arm}")
         print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
-        '''
+        """
 
         # 1. Ottieni il punteggio di similarità per il film selezionato (dal vettore sim_scores)
         curr_similarity: float = sim_scores[curr_arm]
@@ -78,12 +78,12 @@ def _start_rounds_cf_item(
         # 3. Calcola la hybrid reward
         hybrid_reward = compute_reward_item(curr_similarity, curr_mean, beta=0.8)
 
-        '''
+        """
         print(f"Round {i}:")
         print(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
         print(f"  - Similarità: {curr_similarity:.3f}, Mean Normalizzata: {curr_mean:.3f}, Hybrid reward: {hybrid_reward:.3f}")
         print()'
-        '''
+        """
 
         # 4. Aggiorna il bandit con la reward calcolata
         bandit_mab.update(curr_arm, hybrid_reward)
@@ -107,8 +107,7 @@ def _mab_on_collabfilter_item(
     print(f"df_recommendations:\n {df_recommendations}")
 
     # 3. Recupero la similarità tra movie_id e recomm_movie_ids
-    sim_scores = recomm.sim_items
-    sim_scores = sim_scores[recomm_movie_ids].to_numpy()
+    sim_scores = recomm.dist_items[recomm_movie_ids].to_numpy()
 
     # 4. Istanziazione del bandit Epislon-Greedy MAB
     bandit_mab = EpsGreedyMAB(n_arms=NN, epsilon=0.1, Q0=0.0)

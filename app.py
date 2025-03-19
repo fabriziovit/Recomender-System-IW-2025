@@ -64,9 +64,9 @@ class MovieRecommenderApp:
             return
         try:
             self.similarity_matrix = compute_user_similarity_matrix(self.utility_matrix)
-            knn_model_item = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=n_neighbors, n_jobs=-1)
-            knn_model_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=n_neighbors, n_jobs=-1)
-            self.collaborative_recommender = CollaborativeRecommender(knn_model_item, knn_model_user, self.similarity_matrix)
+            knn_model_item = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=n_neighbors + 1, n_jobs=-1)
+            knn_model_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=n_neighbors + 1, n_jobs=-1)
+            self.collaborative_recommender = CollaborativeRecommender(knn_model_item, knn_model_user, self.similarity_matrix, self.utility_matrix)
             self.collaborative_recommender.fit_item_model(self.utility_matrix)
             self.collaborative_recommender.fit_user_model(self.utility_matrix)
             self.collaborative_initialized = True
@@ -176,7 +176,7 @@ class MovieRecommenderApp:
             if not self.sgd_initialized:
                 return pd.DataFrame()
         return mab_on_sgd(self.df_ratings, self.df_movies, user_id)[:top_n]
-    
+
     def run_sgd_predictions(self, user_id: int, utility_matrix: pd.DataFrame) -> float:
         if not self.sgd_initialized:
             self.initialize_sgd_recommender()
@@ -533,6 +533,7 @@ def predict():
     }
     return jsonify(json_response)
 
+
 @app.route("/predict_knn", methods=["POST"])
 def predict_knn():
     data = request.get_json()
@@ -560,8 +561,8 @@ def predict_knn():
         movie["prediction_rating"] = ratings[ratings["userId"] == user_id]["rating"].values[0]
     else:
         movie["already_rated"] = False
-        #df_recoomendations = app_istance. ### Da cambiare con funzione per prendere i rating
-        #movie["prediction_rating"] = df_recoomendations.loc[movie_id].values[0]
+        # df_recoomendations = app_istance. ### Da cambiare con funzione per prendere i rating
+        # movie["prediction_rating"] = df_recoomendations.loc[movie_id].values[0]
         movie["prediction_rating"] = np.random.uniform(0, 5)
 
     movie = movie.to_dict(orient="records")
@@ -570,6 +571,7 @@ def predict_knn():
         "movie": movie,
     }
     return jsonify(json_response)
+
 
 if __name__ == "__main__":
     app.run(debug=True)

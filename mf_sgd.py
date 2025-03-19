@@ -5,7 +5,6 @@ import datetime
 import numpy as np
 import pandas as pd
 from eval import compute_mae_rmse
-from surprise import accuracy
 from utils import load_movielens_data, get_train_valid_test_matrix
 
 # pd.set_option("display.max_rows", None)  # Non limitare il numero di righe

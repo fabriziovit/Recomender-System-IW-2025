@@ -74,8 +74,6 @@ from utils import get_train_valid_test_matrix, load_movielens_data, pearson_dist
 
 def compute_user_similarity_matrix(matrix) -> pd.DataFrame:
     """Calcola la matrice di similarità utente-utente usando pairwise_distances."""
-    # Correlation distance è già 1 - pearson_correlation
-    # Quindi 1 - (1 - pearson_correlation) = pearson_correlation
     similarity_matrix = 1 - pairwise_distances(matrix, metric="correlation", n_jobs=-1)
     similarity_df = pd.DataFrame(similarity_matrix, index=matrix.index, columns=matrix.index)
     return similarity_df
@@ -111,7 +109,7 @@ def eval_cf_user():
     recomm.fit_item_model(train_matrix)  # Forse non necessario se user-based
 
     # Predizioni per il **TEST SET** (corretto!)
-    train_predictions_dict = recomm.compute_predictions_on_train(NN)
+    train_predictions_dict = recomm.compute_predictions_on_train(NN, train_matrix)
 
     mae, rmse = compute_mae_rmse(test_matrix, train_predictions_dict)
 
@@ -156,7 +154,7 @@ def test():
     # recomm.fit_user_model(utility_matrix)  # Non necessario
     # recomm.fit_item_model(utility_matrix)  # Forse non necessario se user-based
 
-    temp_user = 2
+    temp_user = 1
     temp_movie = 4262
     # Predizioni per il **TEST SET** (corretto!)
     print(recomm.get_prediction(temp_user, temp_movie, NN=20))
