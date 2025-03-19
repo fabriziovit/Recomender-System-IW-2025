@@ -12,15 +12,16 @@ def load_movielens_data(path: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataF
     return df_movies, df_ratings, df_tags
 
 
-def pearson_distance(x, y, flag: bool = False):
+def pearson_similarity(x, y):
+    return pearsonr(x, y)[0]
+
+
+def pearson_distance(x, y):
     """Distanza di Pearson (1 - |correlazione|) normalizzata tra 0 e 1"""
-    corr, _ = pearsonr(x, y)
-    if flag:
-        return corr  # Restituisci la correlazione
-    return 1 - np.abs(corr)  # Restituisci la distanza, che è 1 - |correlazione|
+    return 1 - np.abs(pearson_similarity(x, y))  # Restituisci la distanza, che è 1 - |correlazione|
 
 
-def hold_out_random(df_ratings: pd.DataFrame, valid_size=0.15, test_size=0.15, random_state=42) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def _hold_out_random_train_valid_test(df_ratings: pd.DataFrame, valid_size=0.15, test_size=0.15, random_state=42) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     # 1. Splitt in training e test dataframe
     train_ratings_df, val_test_ratings_df = train_test_split(df_ratings, test_size=valid_size + test_size, random_state=42)
     # 2. Splitto il training in training e validation
@@ -31,7 +32,7 @@ def hold_out_random(df_ratings: pd.DataFrame, valid_size=0.15, test_size=0.15, r
 
 def get_train_valid_test_matrix(df_ratings: pd.DataFrame, all_movies_id: pd.Index, all_user_ids: pd.Index) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     # 1. Split dei dati in training, validation e test da ratings
-    df_train_ratings, df_valid_ratings, df_test_ratings = hold_out_random(df_ratings)
+    df_train_ratings, df_valid_ratings, df_test_ratings = _hold_out_random_train_valid_test(df_ratings)
     # 2. Creo le matrici train, valid e test
     train_matrix: pd.DataFrame = df_train_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
     valid_matrix: pd.DataFrame = df_valid_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)

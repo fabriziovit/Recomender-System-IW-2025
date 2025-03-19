@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 from cf_recommender import CollaborativeRecommender
-from eps_mab import EpsGreedyMAB
+from epsilon_mab import EpsGreedyMAB
 from utils import load_movielens_data, pearson_distance, min_max_normalize
 
 
@@ -31,11 +31,13 @@ def _get_topk_movies(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame)
     return topk
 
 
-"""Collaborative Filtering Item-based **************************************************************************************************"""
-
-
+# *** Collaborative Filtering Item-based *** #
 def compute_reward_item(similarity: float, mean_reward: float, beta: float = 0.5) -> float:
-    """Calcola della reward: combinazione lineare di similarità e rating medio del film selezionato"""
+    """
+    La reward è una combinazione lineare della similarità item-item e della media dei rating del film raccomandato.
+    L'idea è premiare i bracci (film) che sono sia simili al film di partenza (pertinenza contestuale item-based)
+    sia, in una certa misura, ben valutati in generale (qualità/popolarità).
+    """
     return beta * similarity + (1 - beta) * mean_reward
 
 
@@ -96,7 +98,7 @@ def _mab_on_collabfilter_item(
     print(f"df_recommendations:\n {df_recommendations}")
 
     # 3. Recupero la similarità tra movie_id e recomm_movie_ids
-    sim_scores = recomm._sim_items
+    sim_scores = recomm.sim_items
     sim_scores = sim_scores[recomm_movie_ids].to_numpy()
 
     # 4. Istanziazione del bandit Epislon-Greedy MAB
@@ -105,13 +107,13 @@ def _mab_on_collabfilter_item(
     # Simulazione del gioco
     _start_rounds_cf_item(num_rounds, bandit_mab, df_recommendations, sim_scores, df_ratings)
 
+    _print_final_stats(bandit_mab, df_recommendations)
+
     # Recupera i top k film raccomandati con il bandit
     return _get_topk_movies(bandit_mab, df_recommendations)
 
 
-"""Collaborative Filtering User-based **************************************************************************************************"""
-
-
+# *** Collaborative Filtering User-based *** #
 def _start_rounds_cf_user(
     recomm: CollaborativeRecommender,
     num_rounds: int,
@@ -134,13 +136,14 @@ def _start_rounds_cf_user(
         print(f"\ncurr_selected_arm: {curr_arm}")
         print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
 
-        prediction: float = recomm.get_user_predictions(df_ratings, recomm._sim_users, user_id, curr_movie_id)
+        prediction: float = recomm.get_user_prediction(df_ratings, recomm.sim_users, user_id, curr_movie_id)
 
-        # Normalizzazione della predizione (opzionale)
-        normalized_prediction: float = min_max_normalize(prediction, min_val=0.5, max_val=5.0)
-
-        # Calcola la reward
-        reward = normalized_prediction
+        """
+        La reward è direttamente proporzionale alla predizione del rating.
+        L'idea è premiare i bracci (film) per i quali il modello user-based predice 
+        un rating più alto per l'utente target.
+        """
+        reward: float = min_max_normalize(prediction, min_val=0.5, max_val=5.0)
 
         print(f"Round {i}:")
         print(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
@@ -205,8 +208,8 @@ def mab_on_collabfilter(
 
     # Istanzia il Recommender con il modello KNN
     recomm = CollaborativeRecommender(knn_model_pearson_item, knn_model_pearson_user)
-    recomm.fit_user_model(utility_matrix, re_fit=True)  # Addestra il modello user-based
-    recomm.fit_item_model(utility_matrix, re_fit=True)  # Addestra il modello item-based
+    recomm.fit_user_model(utility_matrix)  # Addestra il modello user-based, se non già addestrato
+    recomm.fit_item_model(utility_matrix)  # Addestra il modello item-based, se non già addestrato
 
     if movie_id and user_id:
         # Raccomandazioni per entrambi
@@ -219,29 +222,3 @@ def mab_on_collabfilter(
     else:
         # Raccomandazioni per User-Colaborative Filtering
         return _mab_on_collabfilter_user(recomm, utility_matrix, user_id, df_ratings, df_movies, num_rounds, N)
-
-
-def main():
-    # 0. Carica i dati di MovieLens (df_movies, df_ratings, df_tags)
-    df_movies, df_ratings, df_tags = load_movielens_data("dataset/")
-    print(f"Dataset caricato: {len(df_movies)} film, {len(df_ratings)} voti, {len(df_tags)} tag")
-
-    # User to test
-    temp_user_id = 1
-    # Movie to test
-    temp_movie_title = "Toy Story 2 (1999)"
-    temp_movie_id = df_movies[df_movies["title"] == temp_movie_title].index[0]
-
-    # MAB on collaborative-filtering:
-    # Controllare perché restituisce sempre i risultati nello stesso ordine!
-    # Probabile che ci sia un problema con il calcolo della hybrid reward
-
-    # Item-based collaborative filtering
-    # print(mab_on_collabfilter(df_ratings, df_movies, temp_movie_id, None, N=20))
-
-    # User-based collaborative filtering
-    print(mab_on_collabfilter(df_ratings, df_movies, None, temp_user_id, num_rounds=1000, N=20))
-
-
-if __name__ == "__main__":
-    main()

@@ -3,7 +3,7 @@ from sklearn.decomposition import TruncatedSVD
 import pandas as pd
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-from utils import load_movielens_data, hold_out_random, pearson_distance
+from utils import load_movielens_data, hold_out_random_train_test, pearson_distance
 
 
 def precompute_user_means(users_x_movie: pd.DataFrame) -> dict:
@@ -66,7 +66,7 @@ def predict_rating_mean_np(movie_id: int, user_id: int, similiars_x_movie_s: pd.
 
 def get_train_and_test_matrix(df_ratings: pd.DataFrame, all_movies_id: pd.Index):
     # Split dei dati in training e test
-    df_train_ratings, df_test_ratings = hold_out_random(df_ratings)
+    df_train_ratings, df_test_ratings = hold_out_random_train_test(df_ratings)
 
     train_ratings_matrix = df_train_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
     test_ratings_matrix = df_test_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)

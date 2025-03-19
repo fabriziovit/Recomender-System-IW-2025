@@ -6,7 +6,13 @@ from utils import load_movielens_data, pearson_distance
 
 class CollaborativeRecommender:
 
-    def __init__(self, model_item: NearestNeighbors, model_user: NearestNeighbors):
+    def __init__(
+        self,
+        model_item: NearestNeighbors,
+        model_user: NearestNeighbors,
+        user_similarity_matrix: pd.DataFrame = None,
+        train_matrix: pd.DataFrame = None,
+    ):
         """
         Inizializza il Recommender con un modello di machine learning.
         """
@@ -14,26 +20,39 @@ class CollaborativeRecommender:
             raise ValueError(f"model_item must be NearestNeighbors")
         if not model_item is None:
             self.model_item = model_item
+
         if not isinstance(model_user, NearestNeighbors):
             raise ValueError(f"model_user must be NearestNeighbors")
         if not model_user is None:
             self.model_user = model_user
 
+        if user_similarity_matrix is not None:
+            if not isinstance(user_similarity_matrix, pd.DataFrame):
+                raise ValueError(f"user_similarity_matrix must be a pd.DataFrame")
+            self.user_similarity_matrix = user_similarity_matrix
+
+        if train_matrix is not None:
+            if not isinstance(train_matrix, pd.DataFrame):
+                raise ValueError(f"train_matrix must be a pd.DataFrame")
+            self.train_matrix = train_matrix
+
         self._transposed_matrix = None
 
         self._is_fitted_on_matrix_T_item = False
-        self._sim_items: pd.Series = None
-        self._dist_items: pd.Series = None
+        self.sim_items: pd.Series = None
+        self.dist_items: pd.Series = None
 
         self._is_fitted_on_matrix_user = False
-        self._sim_users: pd.Series = None
-        self._dist_users: pd.Series = None
+        self.sim_users: pd.Series = None
+        self.dist_users: pd.Series = None
 
     def fit_item_model(self, matrix: pd.DataFrame, re_fit: bool = False) -> None:
         """
         Addestra il modello item-based su matrix.T se necessario o se forzato.
         """
         if not self._is_fitted_on_matrix_T_item or re_fit:
+            print(f"self._is_fitted_on_matrix_T_item: {self._is_fitted_on_matrix_T_item}")
+            print(f"re_fit: {re_fit}")
             self._transposed_matrix = matrix.T
             self.model_item.fit(self._transposed_matrix)
             self._is_fitted_on_matrix_T_item = True
@@ -73,11 +92,11 @@ class CollaborativeRecommender:
         similar_movies_list = [all_movie_ids[pos_idx] for pos_idx in pos_indexes.squeeze().tolist()[1:]]
 
         # Salva le distanze item-item per il film specificato
-        self._dist_items = pd.Series(distances.squeeze().tolist()[1:], index=similar_movies_list)
+        self.dist_items = pd.Series(distances.squeeze().tolist()[1:], index=similar_movies_list)
         # Salva le similarità item-item per il film specificato
-        self._sim_items = pd.Series(1 - self._dist_items, index=similar_movies_list)
+        self.sim_items = pd.Series(1 - self.dist_items, index=similar_movies_list)
 
-        print(f"\nFilm simili trovati per il film: {df_movies.loc[movie_id, 'title']} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self._dist_items.items()]}")
+        print(f"\nFilm simili trovati per il film: {df_movies.loc[movie_id, 'title']} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self.dist_items.items()]}")
 
         # Crea un DataFrame con le raccomandazioni dei film
         return df_movies.loc[similar_movies_list]
@@ -101,40 +120,35 @@ class CollaborativeRecommender:
         similar_users = [all_users[pos_idx] for pos_idx in pos_indexes.squeeze().tolist()[1:]]
 
         # Salava le distanze user-user per l'utente specificato
-        self._dist_users = pd.Series(distances.squeeze().tolist()[1:], index=similar_users)
+        self.dist_users = pd.Series(distances.squeeze().tolist()[1:], index=similar_users)
         # Salava le similarità user-user per l'utente specificato
-        self._sim_users = pd.Series(1 - self._dist_users, index=similar_users)
+        self.sim_users = pd.Series(1 - self.dist_users, index=similar_users)
 
-        print(f"\nUtenti simili per user {user_id}: {similar_users} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self._dist_users.items()]}")
+        print(f"\nUtenti simili per user {user_id}: {similar_users} con distanze: " + f"{[str(uid) + ': ' + str(val) for uid, val in self.dist_users.items()]}")
 
         # 4. Recupera i film già visti dall'utente target
         seen_mask = matrix.loc[user_id] > 0.0
         seen_movies = matrix.loc[user_id][seen_mask].index
-        # print(f"Film visti dall'utente {user_id}: {df_movies.loc[seen_movies] [['title', 'genres']]}")
-        # print(f"L'utente {user_id} ha visto (numero: {len(seen_movies)}) i seguenti movie_ids: {seen_movies.tolist()}\n")
 
-        # 5. Recupero i film visti dagli utenti simili
+        # 5. Recupero i film visti dagli utenti simili e Rimuove i film già visti dall'utente target
         similars_movies_df = matrix.loc[similar_users]
-        # 5 Rimuove i film già visti dall'utente target
         similars_movies_df = similars_movies_df.loc[:, ~similars_movies_df.columns.isin(seen_movies)]
-        # print(f"Film visti dagli utenti simili: {similars_movies_df.columns.tolist()}")
 
-        # 6. Vettore contenente la media pesata dei rating dei film raccomandati
-        mean_weighted_vec = similars_movies_df.apply(lambda x: np.average(x, weights=1 - self._dist_users.to_numpy()))
-        # 6. Ordina i film raccomandati in base alla media pesata dei rating (mean_weighted_vec)
+        # 6. Vettore contenente la media pesata dei rating dei film raccomandati e Ordina i film raccomandati in base alla media pesata dei rating
+        mean_weighted_vec = similars_movies_df.apply(lambda x: np.average(x, weights=1 - self.dist_users.to_numpy()))
         mean_movies_df = mean_weighted_vec.to_frame(name="values").sort_values(by="values", ascending=False)
 
         return mean_movies_df.merge(df_movies, how="left", on="movieId")
 
-    def get_user_predictions(self, df_ratings: pd.DataFrame, sim_scores: pd.Series, user_id: int, curr_movie_id: int) -> float:
+    def get_mean_centered_predictions(self, df_ratings: pd.DataFrame, sim_scores: pd.Series, user_id: int, curr_movie_id: int) -> float:
 
         # Converti sim_scores in DataFrame per operazioni vettorializzate
         df_sim_scores = sim_scores.rename("similarity").reset_index()
         df_sim_scores.rename(columns={"index": "userId"}, inplace=True)
 
         # 1. Calcolo la media delle valutazioni per ogni utente
-        similars_means: pd.Series = df_ratings.groupby("userId")["rating"].mean().rename("user_mean")
-        df_ratings_with_mean: pd.DataFrame = df_ratings.merge(similars_means, on="userId")
+        users_means: pd.Series = df_ratings.groupby("userId")["rating"].mean().rename("user_mean")
+        df_ratings_with_mean: pd.DataFrame = df_ratings.merge(users_means, on="userId")
 
         # 2. Calcolo il numero di valutazioni per ogni utente
         user_ratings_count = df_ratings.groupby("userId")["rating"].count().rename("num_ratings")
@@ -157,7 +171,7 @@ class CollaborativeRecommender:
             prediction_mean_centered = weighted_sum / ratings_similar_df["adjusted_similarity"].sum()
 
             # Riporto la predizione alla scala originale sommando la media dell'utente target
-            user_target_mean = similars_means.get(user_id, df_ratings["rating"].mean())  # Se l'utente target non ha media, uso la media globale
+            user_target_mean = users_means.get(user_id, df_ratings["rating"].mean())  # Se l'utente target non ha media, uso la media globale
             final_prediction = prediction_mean_centered + user_target_mean
             return final_prediction
         else:

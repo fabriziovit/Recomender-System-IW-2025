@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from eps_mab import EpsGreedyMAB
+from epsilon_mab import EpsGreedyMAB
 from mf_sgd import MF_SGD_User_Based
 from utils import load_movielens_data, min_max_normalize
 
@@ -36,7 +36,12 @@ def _get_topk_movies(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame)
 
 
 def compute_reward(predicted_rating, selections):
-    """Calcola la reward penalizzando i film selezionati troppe volte"""
+    """
+    La reward è basata sulla predizione di rating del modello MF,
+    ma penalizzata in base a quante volte il braccio (film) è già stato selezionato
+    (selections, che corrisponde a curr_arm_clicks).
+    La penalizzazione è logaritmica, quindi diminuisce man mano che il numero di selezioni aumenta.
+    """
     return predicted_rating / (1 + np.log(1 + selections))
 
 
@@ -91,21 +96,7 @@ def mab_on_sgd(df_ratings: pd.DataFrame, df_movies: pd.DataFrame, user_id: int, 
     # Simulazione del gioco
     _start_rounds_mf_sgd(num_rounds, bandit_mab, df_recommendations)
 
+    _print_final_stats(bandit_mab, df_recommendations)
+
     # Recupera i top k film raccomandati con il bandit
     return _get_topk_movies(bandit_mab, df_recommendations)
-
-
-def main():
-    # 0. Carica i dati di MovieLens (df_movies, df_ratings, df_tags)
-    df_movies, df_ratings, df_tags = load_movielens_data("dataset/")
-    print(f"Dataset caricato: {len(df_movies)} film, {len(df_ratings)} voti, {len(df_tags)} tag")
-
-    # User to test
-    temp_user_id = 1
-
-    # Mab on SGD
-    print(mab_on_sgd(df_ratings, df_movies, temp_user_id, num_rounds=1000, N=20))
-
-
-if __name__ == "__main__":
-    main()

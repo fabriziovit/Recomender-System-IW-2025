@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from cb_recommender import ContentBasedRecommender
-from eps_mab import EpsGreedyMAB
+from epsilon_mab import EpsGreedyMAB
 from utils import load_movielens_data, min_max_normalize
 
 
@@ -38,7 +38,12 @@ def _get_topk_movies(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame,
 
 
 def compute_reward(similarity: float, mean_reward: float, beta: float = 0.5) -> float:
-    """Calcola della reward: combinazione lineare di similarità e rating medio del film selezionato"""
+    """
+    La reward è una combinazione lineare della similarità (ora content-based) e della media dei rating.
+    L'obiettivo è bilanciare la pertinenza del contenuto con una misura di qualità o popolarità.
+    NOTA: Se non considerassimo mean_reward, il MAB diventerebbe un semplice meccanismo di selezione
+    epsilon-greedy sopra un sistema di ranking statico (content-based
+    """
     return beta * similarity + (1 - beta) * mean_reward
 
 
@@ -62,8 +67,8 @@ def _start_rounds(
         curr_movie_id: int = df_recommendations.loc[curr_idx_embedd]["movieId"]
         curr_movie_title: str = df_recommendations.loc[curr_idx_embedd]["title"]
 
-        # print(f"\ncurr_selected_arm: {curr_selected_arm}")
-        # print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
+        print(f"\ncurr_selected_arm: {curr_selected_arm}")
+        print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
 
         # 1. Ottieni il punteggio di similarità per il film selezionato (dal vettore sim_scores)
         curr_similarity: float = sim_scores[curr_selected_arm]
@@ -105,21 +110,6 @@ def mab_on_contentbased(movie_title: str, df_ratings: pd.DataFrame, num_rounds: 
     # Simulazione del gioco
     _start_rounds(num_rounds, bandit_mab, df_recommendations, indexes_of_embedd, sim_scores_items, df_ratings)
 
+    _print_final_stats(bandit_mab, df_recommendations, indexes_of_embedd)
+
     return _get_topk_movies(bandit_mab, df_recommendations, indexes_of_embedd)
-
-
-def main():
-    # 0. Carica i dati di MovieLens (df_movies, df_ratings, df_tags)
-    df_movies, df_ratings, df_tags = load_movielens_data("dataset/")
-    print(f"Dataset caricato: {len(df_movies)} film, {len(df_ratings)} voti, {len(df_tags)} tag")
-
-    # Movie to test
-    temp_movie_title = "Toy Story 2 (1999)"
-    temp_movie_id = df_movies[df_movies["title"] == temp_movie_title].index[0]
-
-    # MAB on content-based
-    print(mab_on_contentbased(temp_movie_title, df_ratings, num_rounds=1000, N=20))
-
-
-if __name__ == "__main__":
-    main()

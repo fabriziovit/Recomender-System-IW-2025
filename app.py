@@ -65,8 +65,8 @@ class MovieRecommenderApp:
             knn_model_item = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=n_neighbors, n_jobs=-1)
             knn_model_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=n_neighbors, n_jobs=-1)
             self.collaborative_recommender = CollaborativeRecommender(knn_model_item, knn_model_user)
-            self.collaborative_recommender.fit_item_model(self.utility_matrix, re_fit=True)
-            self.collaborative_recommender.fit_user_model(self.utility_matrix, re_fit=True)
+            self.collaborative_recommender.fit_item_model(self.utility_matrix)
+            self.collaborative_recommender.fit_user_model(self.utility_matrix)
             self.collaborative_initialized = True
         except Exception as e:
             print(f"Errore nell'inizializzazione del collaborative recommender: {e}")
