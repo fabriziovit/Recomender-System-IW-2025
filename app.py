@@ -183,6 +183,13 @@ class MovieRecommenderApp:
             if not self.sgd_initialized:
                 return 0.0
         return self.sgd_model.get_recommendations(utility_matrix, user_id)
+    
+    def run_knn_predictions(self, user_id: int, movie_id: int) -> float:
+        if not self.collaborative_initialized:
+            self.initialize_collaborative_recommender()
+            if not self.collaborative_initialized:
+                return 0.0
+        return self.collaborative_recommender.get_prediction(user_id, movie_id, NN=20)
 
 
 app_instance = MovieRecommenderApp()
@@ -561,9 +568,7 @@ def predict_knn():
         movie["prediction_rating"] = ratings[ratings["userId"] == user_id]["rating"].values[0]
     else:
         movie["already_rated"] = False
-        # df_recoomendations = app_istance. ### Da cambiare con funzione per prendere i rating
-        # movie["prediction_rating"] = df_recoomendations.loc[movie_id].values[0]
-        movie["prediction_rating"] = np.random.uniform(0, 5)
+        movie["prediction_rating"] = app_instance.run_knn_predictions(user_id, movie_id)
 
     movie = movie.to_dict(orient="records")
     json_response = {
