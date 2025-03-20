@@ -6,11 +6,9 @@ from abc import ABC, abstractmethod
 
 # *** Base MAB class ***#
 class MAB(ABC):
-    """
-    Base class for a contextual Multi-Armed Bandit (MAB)
+    """Base class for a contextual Multi-Armed Bandit (MAB)
     n_arms: Numero di bracci
-    n_dims: Numero di dimensioni del contesto (solo per bandit contestuali)
-    """
+    n_dims: Numero di dimensioni del contesto (solo per bandit contestuali)"""
 
     def __init__(self, n_arms: int, n_dims: Optional[int] = None):
         if not isinstance(n_arms, int):
@@ -59,8 +57,7 @@ class MAB(ABC):
 
 
 def get_best_arm(qvalues: np.ndarray) -> int:
-    """
-    Sceglie il braccio con reward massima.
+    """Sceglie il braccio con reward massima.
     Se ci sono più bracci con lo stesso valore massimo, ne seleziona uno."""
     indices = np.argwhere(qvalues == np.max(qvalues))  # Trova tutti gli indici con valore massimo
     idx = np.random.randint(0, len(indices))  # Sceglie casualmente tra questi
@@ -69,12 +66,11 @@ def get_best_arm(qvalues: np.ndarray) -> int:
 
 # *** Epsilon-Greedy MAB ****#
 class EpsGreedyMAB(MAB):
-    """
-    Epsilon-Greedy multi-armed bandit
-        :param n_arms : int [Number of arms (es. film da raccomandare)].
-        :param n_dims: int [Numero di dimensioni del contesto (opzionale)]
-        :param epsilon : float [Explore probability]
-        :param Q0 : float [Initial value for the reward estimate of arms.]
+    """Epsilon-Greedy multi-armed bandit
+    :param n_arms : int [Number of arms (es. film da raccomandare)].
+    :param n_dims: int [Numero di dimensioni del contesto (opzionale)]
+    :param epsilon : float [Explore probability]
+    :param Q0 : float [Initial value for the reward estimate of arms.]
     """
 
     def __init__(self, n_arms: int = 10, n_dims: Optional[int] = None, epsilon: float = 0.1, Q0: float = 0.0):

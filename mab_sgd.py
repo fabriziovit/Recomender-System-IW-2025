@@ -36,12 +36,10 @@ def _get_topk_movies(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame)
 
 
 def compute_reward(predicted_rating, selections):
-    """
-    La reward è basata sulla predizione di rating del modello MF,
+    """La reward è basata sulla predizione di rating del modello MF,
     ma penalizzata in base a quante volte il braccio (film) è già stato selezionato
     (selections, che corrisponde a curr_arm_clicks).
-    La penalizzazione è logaritmica, quindi diminuisce man mano che il numero di selezioni aumenta.
-    """
+    La penalizzazione è logaritmica, quindi diminuisce man mano che il numero di selezioni aumenta."""
     return predicted_rating / (1 + np.log(1 + selections))
 
 
@@ -53,17 +51,17 @@ def _start_rounds_mf_sgd(
 
     for i in range(0, num_rounds):
 
-        # 0. Il bandit seleziona un braccio
+        # Il bandit seleziona un braccio
         curr_arm: int = bandit_mab.play()
 
-        # 1. Recupera il movieId e il titolo del film selezionato
+        # Recupera il movieId e il titolo del film selezionato
         curr_movie_id: int = df_recommendations.iloc[curr_arm]["movieId"]
         curr_movie_title: str = df_recommendations.iloc[curr_arm]["title"]
 
-        # 2. Calcola il reward per il braccio selezionato
+        # Calcola il reward per il braccio selezionato
         predicted_rating: float = df_recommendations.iloc[curr_arm]["predicted rating"]
         curr_arm_clicks: int = bandit_mab.get_clicks_for_arm()[curr_arm]
-        # 3. Normalizzazione dei valori per la reward
+        # Normalizzazione dei valori per la reward
         predicted_rating: float = min_max_normalize(predicted_rating, min_val=0.5, max_val=5.0)
         curr_arm_clicks: float = min_max_normalize(curr_arm_clicks, min(bandit_mab.get_clicks_for_arm()), max(bandit_mab.get_clicks_for_arm()))
 
@@ -74,23 +72,24 @@ def _start_rounds_mf_sgd(
 
 
 def mab_on_sgd(df_ratings: pd.DataFrame, df_movies: pd.DataFrame, user_id: int, num_rounds: int = 1000, N: int = 20) -> list:
-    # 1. Crea la utility matrix
+    """Simula il bandit su MF-SGD per raccomandare film all'utente user_id."""
+    # Crea la utility matrix
     utility_matrix = df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
 
-    # 2. Carica il modello MF-SGD
+    # Carica il modello MF-SGD
     model_path2 = "models/mf_model_n200_lr0.001_lambda0.0001_norm.pkl"
     recomm: MF_SGD_User_Based = MF_SGD_User_Based.load_model(model_path2)
 
-    # 3. Raccomandazioni per l'utente user_id
+    # Raccomandazioni per l'utente user_id
     df_recommendations: pd.DataFrame = recomm.get_recommendations(utility_matrix, user_id)
     df_recommendations = df_recommendations.merge(df_movies, on="movieId")[["title", "values"]].head(N)
     df_recommendations.rename(columns={"values": "predicted rating"}, inplace=True)
 
-    # 4.  Resetta l'indice per renderlo compatibile con il bandit
+    # Resetta l'indice per renderlo compatibile con il bandit
     df_recommendations.reset_index(drop=False, inplace=True)
     print(f"Reccomendations:\n {df_recommendations}")
 
-    # 5. Istanziazione del bandit Epislon-Greedy MAB
+    # Istanziazione del bandit Epislon-Greedy MAB
     bandit_mab = EpsGreedyMAB(n_arms=N, epsilon=0.1, Q0=0.0)
 
     # Simulazione del gioco

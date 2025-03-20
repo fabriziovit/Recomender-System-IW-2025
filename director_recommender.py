@@ -4,9 +4,7 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 from collections import defaultdict
 
 def normalize_string(s):
-    """
-    Normalizza una stringa sostituendo vari caratteri speciali e rimuovendo punteggiatura superflua.
-    """
+    """Normalizza una stringa sostituendo vari caratteri speciali e rimuovendo punteggiatura superflua."""
     import unicodedata
     import re
     
@@ -41,17 +39,13 @@ def normalize_string(s):
     return s
 
 def compare_strings(str1, str2, case_sensitive=True, ignore_punctuation=False):
-    """
-    Confronta due stringhe dopo normalizzazione.
-    
+    """Confronta due stringhe dopo normalizzazione.
     Args:
         str1, str2: Le stringhe da confrontare
         case_sensitive: Se False, ignora differenze tra maiuscole e minuscole
         ignore_punctuation: Se True, rimuove tutta la punteggiatura prima del confronto
-    
     Returns:
-        bool: True se le stringhe sono considerate uguali dopo la normalizzazione
-    """
+        bool: True se le stringhe sono considerate uguali dopo la normalizzazione"""
     import re
     
     # Normalizzazione di base
@@ -71,16 +65,12 @@ def compare_strings(str1, str2, case_sensitive=True, ignore_punctuation=False):
     return norm1 == norm2
 
 def get_director_by_movie_id(csv_file, movie_id):
-    """
-    Ottiene il regista di un film dal file CSV dato il movieId.
-    
+    """Ottiene il regista di un film dal file CSV dato il movieId.
     Args:
         csv_file (str): Percorso del file CSV
         movie_id (int): ID del film da cercare
-        
     Returns:
-        str: Nome del regista o None se non trovato
-    """
+        str: Nome del regista o None se non trovato"""
     try:
         with open(csv_file, 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
@@ -96,16 +86,12 @@ def get_director_by_movie_id(csv_file, movie_id):
         return None
     
 def get_title_by_movie_id(csv_file, movie_id):
-    """
-    Ottiene il regista di un film dal file CSV dato il movieId.
-    
+    """Ottiene il regista di un film dal file CSV dato il movieId.
     Args:
         csv_file (str): Percorso del file CSV
         movie_id (int): ID del film da cercare
-        
     Returns:
-        str: Nome del regista o None se non trovato
-    """
+        str: Nome del regista o None se non trovato"""
     try:
         with open(csv_file, 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
@@ -122,9 +108,7 @@ def get_title_by_movie_id(csv_file, movie_id):
         return None
     
 def get_release_year_from_wikidata(film_title, director_name):
-    """
-    Ottiene l'anno di uscita di un film da Wikidata, filtrando per titolo e regista.
-    """
+    """Ottiene l'anno di uscita di un film da Wikidata, filtrando per titolo e regista."""
     sparql = SPARQLWrapper("https://query.wikidata.org/sparql")
     query = f"""
     PREFIX wd: <http://www.wikidata.org/entity/>
@@ -153,9 +137,7 @@ def get_release_year_from_wikidata(film_title, director_name):
     return "N/A"
 
 def get_directed_films_with_actors(director_name):
-    """
-    Ottiene i film diretti da un regista con attori e prova a recuperare l'anno di uscita da Wikidata.
-    """
+    """Ottiene i film diretti da un regista con attori e prova a recuperare l'anno di uscita da Wikidata."""
     sparql = SPARQLWrapper("https://dbpedia.org/sparql")
     query = f"""
     PREFIX dbo: <http://dbpedia.org/ontology/>
@@ -212,18 +194,14 @@ def get_directed_films_with_actors(director_name):
         return []
 
 def recommend_films_with_actors(director_name, max_actors=5, title=None, movie_title_selected=False):
-    """
-    Restituisce una struttura dati di film raccomandati con attori.
-    
+    """Restituisce una struttura dati di film raccomandati con attori.
     Args:
         director_name (str): Il nome del regista
         max_actors (int): Numero massimo di attori da mostrare per film
         title (str, optional): Titolo del film da escludere
         movie_title_selected (bool): Se True, esclude il film con titolo corrispondente
-    
     Returns:
-        dict: Un dizionario contenente la lista dei film raccomandati e informazioni sul regista
-    """
+        dict: Un dizionario contenente la lista dei film raccomandati e informazioni sul regista"""
     films = get_directed_films_with_actors(director_name)
     
     if not films:
@@ -284,14 +262,11 @@ def recommend_films_with_actors(director_name, max_actors=5, title=None, movie_t
     return result
 
 def recommend_by_movie_id(csv_file, movie_id, max_actors=5, movie_title_selected = False):
-    """
-    Dato un movieId, trova il regista nel CSV e mostra raccomandazioni di altri suoi film.
-    
+    """Dato un movieId, trova il regista nel CSV e mostra raccomandazioni di altri suoi film.
     Args:
         csv_file (str): Percorso del file CSV
         movie_id (int): ID del film di cui cercare il regista
-        max_actors (int): Numero massimo di attori da mostrare per film
-    """
+        max_actors (int): Numero massimo di attori da mostrare per film"""
     director = get_director_by_movie_id(csv_file, movie_id)
     title = get_title_by_movie_id(csv_file, movie_id)
     

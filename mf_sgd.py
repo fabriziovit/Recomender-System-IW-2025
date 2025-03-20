@@ -4,7 +4,7 @@ import logging
 import datetime
 import numpy as np
 import pandas as pd
-from eval import compute_mae_rmse
+from eval import eval_mae_rmse
 from utils import load_movielens_data, get_train_valid_test_matrix
 
 # pd.set_option("display.max_rows", None)  # Non limitare il numero di righe
@@ -259,92 +259,25 @@ class MF_SGD_User_Based:
         print(f"Modello salvato con successo in: {filepath}")
 
 
-# ************************************************************************************************************** #
-
-
-def eval():
+def test():
     # 1. Carica il dataset MovieLens
-    _, df_ratings, _ = load_movielens_data("dataset/")
+    df_movies, df_ratings, df_tags = load_movielens_data("dataset/")
 
     # 2. Crea la utility matrix
     utility_matrix = df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
-    print(f"Dimensioni utility matrix: {utility_matrix.shape}")
 
-    # 3. Splitting in training e test matrix
-    train_matrix, valid_matrix, test_matrix = get_train_valid_test_matrix(df_ratings, utility_matrix.columns, utility_matrix.index)
+    user_ids_to_test = [100, 604]
 
-    # Parametri Modello
-    n_epochs: int = 3000
-    num_factors_list: list = [20]  #  [10, 20, 30, 50]  # Test con diversi numeri di fattori latenti
-    learning_rate_list: list = [0.001]  #! [0.001]  # Test con diversi learning rates
-    lambda_list: list = [0.001]  # Test con diversi valori di lambda (weight decay)
-    # lambda_list: list = [1.0, 0.0, 0.1, 0.01, 0.001, 0.0001, 0.00001]  #! Test con diversi valori di lambda (weight decay)
+    model_path1 = "./models/mf_model_n70_lr0.001_lambda1e-05_norm.pkl"
+    recomm1: MF_SGD_User_Based = MF_SGD_User_Based.load_model(model_path1)
 
-    #
-    # Crea directory per i risultati e i modelli
-    os.makedirs("results", exist_ok=True)
-    os.makedirs("models", exist_ok=True)
+    model_path2 = "./models/mf_model_n140_lr0.001_lambda1e-05_norm.pkl"
+    recomm2: MF_SGD_User_Based = MF_SGD_User_Based.load_model(model_path2)
 
-    for n_factor in num_factors_list:
-        for learning_rate in learning_rate_list:
-            for reg in lambda_list:
-                evaluation_output = []
+    for user_id in user_ids_to_test:
+        print(f"\n\nUser ID: {user_id}")
+        print(recomm2.get_recommendations(utility_matrix, user_id).head(5).merge(df_movies, on="movieId")[["title", "values"]])
 
-                # 5 Modello Matrix Factorization SGD
-                recomm = MF_SGD_User_Based(n_factor, learning_rate, reg, n_epochs, utility_matrix, train_matrix, valid_matrix)
-
-                # 6. Fit del modello MF su Training
-                recomm.fit(refit=True, evaluation_output=evaluation_output)
-
-                # Predizioni per tutti gli utenti
-                train_predictions_dict = recomm._predictions_train
-
-                mae, rmse = compute_mae_rmse(test_matrix, train_predictions_dict)
-
-                evaluation_output.append(f"\### Risultati MAE e RMSE ###")
-                evaluation_output.append(f"  num_factors: {n_factor}, learning_rate: {learning_rate}, lambda: {reg}")
-                evaluation_output.append(f"  MAE: {mae:.10f}")
-                evaluation_output.append(f"  RMSE: {rmse:.10f}\n")
-
-                print(f"\### Risultati MAE e RMSE ###")
-                print(f"  num_factors: {n_factor}, learning_rate: {learning_rate}, lambda: {reg}")
-                print(f"  MAE: {mae:.10f}")
-                print(f"  RMSE: {rmse:.10f}\n")
-
-                # Salva i risultati su file
-                model_name = f"mf_model_n{n_factor}_lr{learning_rate}_lambda{reg}_norm"
-                with open(f"results/{model_name}.txt", "w") as f:
-                    f.write("\n" + "=" * 70 + "\n")
-                    f.write(f"Evaluation Date: {datetime.datetime.now()}\n")
-                    for line in evaluation_output:
-                        f.write(line + "\n")
-                    f.write("=" * 70 + "\n")
-
-                # Salva ogni modello
-                model_path = f"models/{model_name}.pkl"
-                recomm.save_model(model_path)
-
-
-# ************************************************************************************************************** #
 
 if __name__ == "__main__":
-    # ########################################################### #
-    eval()
-    # ########################################################### #
-    # 1. Carica il dataset MovieLens
-    # df_movies, df_ratings, df_tags = load_movielens_data("dataset/")
-
-    # # 2. Crea la utility matrix
-    # utility_matrix = df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
-
-    # user_ids_to_test = [100, 604]
-
-    # model_path1 = "./models/mf_model_n70_lr0.001_lambda1e-05_norm.pkl"
-    # recomm1: MF_SGD_User_Based = MF_SGD_User_Based.load_model(model_path1)
-
-    # model_path2 = "./models/mf_model_n140_lr0.001_lambda1e-05_norm.pkl"
-    # recomm2: MF_SGD_User_Based = MF_SGD_User_Based.load_model(model_path2)
-
-    # for user_id in user_ids_to_test:
-    #     print(f"\n\nUser ID: {user_id}")
-    #     print(recomm2.get_recommendations(utility_matrix, user_id).head(5).merge(df_movies, on="movieId")[["title", "values"]])
+    test()

@@ -1,23 +1,22 @@
-import datetime
 import os
+import datetime
 import pandas as pd
-from sklearn.metrics import pairwise_distances
-from sklearn.neighbors import NearestNeighbors
-from eval import compute_mae_rmse
 from mf_sgd import MF_SGD_User_Based
+from sklearn.neighbors import NearestNeighbors
 from cf_recommender import CollaborativeRecommender
-from utils import get_train_valid_test_matrix, load_movielens_data, pearson_distance, pearson_similarity
+from eval import eval_mae_rmse, eval_precision_recall
+from utils import get_train_valid_test_matrix, load_movielens_data, pearson_distance, compute_user_similarity_matrix
 
 
-""" def eval_sgd():
-    # 1. Carica il dataset MovieLens
+def eval_sgd():
+    # Carica il dataset MovieLens
     _, df_ratings, _ = load_movielens_data("dataset/")
 
-    # 2. Crea la utility matrix
+    # Crea la utility matrix
     utility_matrix = df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
     print(f"Dimensioni utility matrix: {utility_matrix.shape}")
 
-    # 3. Splitting in training e test matrix
+    # Splitting in training e test matrix
     train_matrix, valid_matrix, test_matrix = get_train_valid_test_matrix(df_ratings, utility_matrix.columns, utility_matrix.index)
 
     # Parametri Modello
@@ -46,7 +45,7 @@ from utils import get_train_valid_test_matrix, load_movielens_data, pearson_dist
                 # Predizioni per tutti gli utenti
                 train_predictions_dict = recomm._predictions_train
 
-                mae, rmse = compute_mae_rmse(test_matrix, train_predictions_dict)
+                mae, rmse = eval_mae_rmse(test_matrix, train_predictions_dict)
 
                 evaluation_output.append(f"\### Risultati MAE e RMSE ###")
                 evaluation_output.append(f"  num_factors: {n_factor}, learning_rate: {learning_rate}, lambda: {reg}")
@@ -69,14 +68,8 @@ from utils import get_train_valid_test_matrix, load_movielens_data, pearson_dist
 
                 # Salva ogni modello
                 model_path = f"models/{model_name}.pkl"
-             recomm.save_model(model_path)  """
-
-
-def compute_user_similarity_matrix(matrix) -> pd.DataFrame:
-    """Calcola la matrice di similarità utente-utente usando pairwise_distances."""
-    similarity_matrix = 1 - pairwise_distances(matrix, metric="correlation", n_jobs=-1)
-    similarity_df = pd.DataFrame(similarity_matrix, index=matrix.index, columns=matrix.index)
-    return similarity_df
+                recomm.save_model(model_path)
+                print(f"Modello salvato in: {model_path}\n")
 
 
 def eval_cf_user():
@@ -99,19 +92,19 @@ def eval_cf_user():
     os.makedirs("models", exist_ok=True)
     evaluation_output: list = []
 
-    NN = 20  # Numero di vicini da considerare (potrebbe essere ridotto per test)
+    NN = 50  # Numero di vicini da considerare (potrebbe essere ridotto per test)
 
     # 5. Inizializza il modello CollaborativeRecommender **passando la matrice e train_matrix**
     knn_model_pearson_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=NN, n_jobs=-1)  # Potresti non usarlo se ti concentri solo su user-based
     knn_model_pearson_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=NN, n_jobs=-1)  # Potresti non usarlo se ti concentri solo su user-based
-    recomm = CollaborativeRecommender(knn_model_pearson_user, knn_model_pearson_user, user_similarity_matrix, train_matrix)  # Passa matrice e train_matrix
-    recomm.fit_user_model(train_matrix)  # Non necessario
-    recomm.fit_item_model(train_matrix)  # Forse non necessario se user-based
+    recomm = CollaborativeRecommender(knn_model_pearson_user, knn_model_pearson_user, user_similarity_matrix, utility_matrix)  # Passa matrice e train_matrix
+    recomm.fit_user_model(train_matrix)
+    recomm.fit_item_model(train_matrix)
 
     # Predizioni per il **TEST SET** (corretto!)
     train_predictions_dict = recomm.compute_predictions_on_train(NN, train_matrix)
 
-    mae, rmse = compute_mae_rmse(test_matrix, train_predictions_dict)
+    mae, rmse = eval_mae_rmse(test_matrix, train_predictions_dict)
 
     evaluation_output.append(f"\### Risultati MAE e RMSE ###")
     evaluation_output.append(f"  MAE: {mae:.10f}")
@@ -130,12 +123,8 @@ def eval_cf_user():
             f.write(line + "\n")
         f.write("=" * 70 + "\n")
 
-    # Salva ogni modello (se necessario, potresti salvare solo la matrice di similarità)
-    model_path = f"models/{model_name}.pkl"
-    recomm.save_model(model_path)  # Dovresti adattare save_model per salvare la matrice se necessario
 
-
-def test():
+def test_cf_user():
     # Carica il dataset MovieLens
     df_movies, df_ratings, _ = load_movielens_data("dataset/")
 
@@ -151,15 +140,12 @@ def test():
     knn_model_pearson_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=20, n_jobs=-1)  # Potresti non usarlo se ti concentri solo su user-based
     knn_model_pearson_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=20, n_jobs=-1)  # Potresti non usarlo se ti concentri solo su user-based
     recomm = CollaborativeRecommender(knn_model_pearson_user, knn_model_pearson_user, user_similarity_matrix, utility_matrix)  # Passa matrice e train_matrix
-    # recomm.fit_user_model(utility_matrix)  # Non necessario
-    # recomm.fit_item_model(utility_matrix)  # Forse non necessario se user-based
 
     temp_user = 1
     temp_movie = 4262
-    # Predizioni per il **TEST SET** (corretto!)
+
     print(recomm.get_prediction(temp_user, temp_movie, NN=20))
 
 
 if __name__ == "__main__":
-    # eval_cf_user()
-    test()
+    eval_cf_user()

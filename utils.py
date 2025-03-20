@@ -1,9 +1,8 @@
-from typing import Union
 import pandas as pd
-import numpy as np
-from sklearn.metrics.pairwise import pairwise_distances
+from typing import Union
 from scipy.stats import pearsonr
 from sklearn.model_selection import train_test_split
+from sklearn.metrics.pairwise import pairwise_distances
 
 
 def load_movielens_data(path: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -24,7 +23,7 @@ def pearson_distance(x, y):
 
 def compute_user_similarity_matrix(matrix) -> pd.DataFrame:
     """Calcola la matrice di similarità utente-utente usando pairwise_distances."""
-    # Correlation distance è già 1 - pearson_correlation
+    # pairwise_distances è 1 - pearson_correlation
     # Quindi 1 - (1 - pearson_correlation) = pearson_correlation
     similarity_matrix = 1 - pairwise_distances(matrix, metric="correlation", n_jobs=-1)
     similarity_df = pd.DataFrame(similarity_matrix, index=matrix.index, columns=matrix.index)
@@ -38,13 +37,13 @@ def _hold_out_random_train_valid_test(
     random_state=42,
     ret_valid: bool = False,
 ) -> Union[tuple[pd.DataFrame, pd.DataFrame], tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]]:
-    # 1. Splitt in training e test dataframe
+    # Split in training e test dataframe
     train_ratings_df, test_ratings_df = train_test_split(df_ratings, test_size=valid_size + test_size, random_state=42)
     if not ret_valid:
         print(f"# Train Rows: {len(train_ratings_df)}, Test Rows: {len(test_ratings_df)}")
         return train_ratings_df, test_ratings_df
     else:
-        # 2. Splitto il training in training effettivo e validation
+        # Split il training in training effettivo e validation
         valid_ratings_df, test_ratings_df = train_test_split(test_ratings_df, test_size=test_size, random_state=42)
         print(f"# Train Rows: {len(train_ratings_df)}, Valid Rows: {len(valid_ratings_df)}, Test Rows: {len(test_ratings_df)}")
     return train_ratings_df, valid_ratings_df, test_ratings_df

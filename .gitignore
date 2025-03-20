@@ -1,7 +1,7 @@
 myenv/
 models/
 results/
-env.bat
+runenv.bat
 pyproject.toml
 old_res.txt
 temp_res.txt

@@ -22,7 +22,7 @@ def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFram
 
 
 def _get_topk_movies(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame) -> None:
-    # print("\nTop film raccomandati:")
+    print("\nTop film raccomandati:")
     top_n_arms = bandit_mab.get_top_n()
     topk = []
     for i, (curr_selected_arm, q_value) in enumerate(top_n_arms):
@@ -33,11 +33,9 @@ def _get_topk_movies(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame)
 
 # *** Collaborative Filtering Item-based *** #
 def compute_reward_item(similarity: float, mean_reward: float, beta: float = 0.5) -> float:
-    """
-    La reward è una combinazione lineare della similarità item-item e della media dei rating del film raccomandato.
+    """La reward è una combinazione lineare della similarità item-item e della media dei rating del film raccomandato.
     L'idea è premiare i bracci (film) che sono sia simili al film di partenza (pertinenza contestuale item-based)
-    sia, in una certa misura, ben valutati in generale (qualità/popolarità).
-    """
+    sia, in una certa misura, ben valutati in generale (qualità/popolarità)."""
     return beta * similarity + (1 - beta) * mean_reward
 
 
@@ -55,27 +53,21 @@ def _start_rounds_cf_item(
 
     for i in range(0, num_rounds):
 
-        # 0. Il bandit seleziona un braccio
+        # Il bandit seleziona un braccio
         curr_arm: int = bandit_mab.play()
-
-        # print(df_recommendations.head(5))
 
         # Collaborative: Recupera l'indice dell'embedding del film selezionato dal bandit
         curr_movie_id: int = df_recommendations.iloc[curr_arm]["movieId"]
         curr_movie_title: str = df_recommendations.iloc[curr_arm]["title"]
-        """
-        print(f"\ncurr_selected_arm: {curr_arm}")
-        print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
-        """
 
-        # 1. Ottieni il punteggio di similarità per il film selezionato (dal vettore sim_scores)
+        # Ottieni il punteggio di similarità per il film selezionato (dal vettore sim_scores)
         curr_similarity: float = sim_scores[curr_arm]
 
-        # 2. Calcola la media normalizzata per il film selezionato
+        # Calcola la media normalizzata per il film selezionato
         movie_ratings: pd.Series = df_ratings[df_ratings["movieId"] == curr_movie_id]["rating"]
         curr_mean: float = min_max_normalize(movie_ratings, min_val=0.5, max_val=5.0)
 
-        # 3. Calcola la hybrid reward
+        # Calcola la hybrid reward
         hybrid_reward = compute_reward_item(curr_similarity, curr_mean, beta=0.8)
 
         """
@@ -85,7 +77,7 @@ def _start_rounds_cf_item(
         print()'
         """
 
-        # 4. Aggiorna il bandit con la reward calcolata
+        # Aggiorna il bandit con la reward calcolata
         bandit_mab.update(curr_arm, hybrid_reward)
 
 
@@ -98,18 +90,17 @@ def _mab_on_collabfilter_item(
     NN: int = 20,
 ) -> None:
 
-    # 1. Otteniamo il DataFrame dei film raccomandati
+    # Otteniamo il DataFrame dei film raccomandati
     df_recommendations: pd.DataFrame = recomm.get_item_recommendations(movie_id, df_movies).head(NN)
     recomm_movie_ids: pd.Index = df_recommendations.index
 
-    # 2. Resetta l'indice del DataFrame delle raccomandazioni per renderlo compatibile con il bandit
+    # Resetta l'indice del DataFrame delle raccomandazioni per renderlo compatibile con il bandit
     df_recommendations.reset_index(drop=False, inplace=True)
-    print(f"df_recommendations:\n {df_recommendations}")
 
-    # 3. Recupero la similarità tra movie_id e recomm_movie_ids
+    # Recupero la similarità tra movie_id e recomm_movie_ids
     sim_scores = recomm.dist_items[recomm_movie_ids].to_numpy()
 
-    # 4. Istanziazione del bandit Epislon-Greedy MAB
+    # Istanziazione del bandit Epislon-Greedy MAB
     bandit_mab = EpsGreedyMAB(n_arms=NN, epsilon=0.1, Q0=0.0)
 
     # Simulazione del gioco
@@ -133,7 +124,7 @@ def _start_rounds_cf_user(
 
     for i in range(0, num_rounds):
 
-        # 0. Il bandit seleziona un braccio
+        # Il bandit seleziona un braccio
         curr_arm: int = bandit_mab.play()
 
         # Epsilon decay
@@ -144,21 +135,18 @@ def _start_rounds_cf_user(
         print(f"\ncurr_selected_arm: {curr_arm}")
         print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
 
-        # prediction: float = recomm.get_mean_centered_predictions(df_ratings, recomm.sim_users, user_id, curr_movie_id)
         prediction: float = recomm.get_prediction(user_id, curr_movie_id, NN=20)
 
-        """
-        La reward è direttamente proporzionale alla predizione del rating.
+        """ La reward è direttamente proporzionale alla predizione del rating.
         L'idea è premiare i bracci (film) per i quali il modello user-based predice 
-        un rating più alto per l'utente target.
-        """
+        un rating più alto per l'utente target."""
         reward: float = min_max_normalize(prediction, min_val=0.5, max_val=5.0)
 
-        print(f"Round {i}:")
-        print(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
-        print(f"  - Mean-Centered Prediction (before normalization): {prediction:.3f}, Reward (normalized prediction): {reward:.3f}")
+        # print(f"Round {i}:")
+        # print(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
+        # print(f"  - Mean-Centered Prediction (before normalization): {prediction:.3f}, Reward (normalized prediction): {reward:.3f}")
 
-        # 4. Aggiorna il bandit con la reward calcolata
+        # Aggiorna il bandit con la reward calcolata
         bandit_mab.update(curr_arm, reward)
 
 
@@ -172,14 +160,14 @@ def _mab_on_collabfilter_user(
     NN: int = 20,
 ) -> None:
 
-    # 1. Otteniamo il DataFrame dei film raccomandati
+    # Otteniamo il DataFrame dei film raccomandati
     df_recommendations: pd.DataFrame = recomm.get_user_recommendations(user_id, matrix, df_movies).head(NN)
 
-    # 2. Resetta l'indice del DataFrame delle raccomandazioni per renderlo compatibile con il bandit
+    # Resetta l'indice del DataFrame delle raccomandazioni per renderlo compatibile con il bandit
     df_recommendations.reset_index(drop=False, inplace=True)
     print(f"Reccomendations:\n {df_recommendations}")
 
-    # 4. Istanziazione del bandit Epislon-Greedy MAB
+    # Istanziazione del bandit Epislon-Greedy MAB
     bandit_mab = EpsGreedyMAB(n_arms=NN, epsilon=0.9, Q0=0.0)
 
     # Simulazione del gioco
@@ -187,7 +175,7 @@ def _mab_on_collabfilter_user(
 
     _print_final_stats(bandit_mab, df_recommendations)
 
-    print(f"Top k film raccomandati: {_get_topk_movies(bandit_mab, df_recommendations)}")
+    print(f"{_get_topk_movies(bandit_mab, df_recommendations)}")
 
     # Recupera i top k film raccomandati con il bandit
     return _get_topk_movies(bandit_mab, df_recommendations)
@@ -203,7 +191,8 @@ def mab_on_collabfilter(
     recommender: CollaborativeRecommender = None,
     utility_matrix: pd.DataFrame = None,
 ) -> list:
-
+    
+    """Simula il bandit su un recommender Collaborative Filtering (user-based o item-based)."""
     if not movie_id and not user_id:
         raise ValueError("Almeno movie_id o user_id devono essere specificati")
 
