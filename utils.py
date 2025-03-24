@@ -18,7 +18,7 @@ def pearson_similarity(x, y):
 
 def pearson_distance(x, y):
     """Distanza di Pearson (1 - correlazione) normalizzata tra 0 e 1"""
-    return 1 - pearson_similarity(x, y)  # Restituisci la distanza, che è 1 - |correlazione|
+    return 1 - pearson_similarity(x, y)  # Restituisci la distanza, che è 1 - correlazione
 
 
 def compute_user_similarity_matrix(matrix) -> pd.DataFrame:

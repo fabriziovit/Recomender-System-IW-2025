@@ -1,12 +1,10 @@
 myenv/
 models/
 results/
-runenv.bat
+active.bat
 pyproject.toml
 old_res.txt
 temp_res.txt
-main_mab1.py
-main_mab2.py
 __pycache__/
 pycache/
 *.pyc

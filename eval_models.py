@@ -72,7 +72,7 @@ def eval_sgd():
                 print(f"Modello salvato in: {model_path}\n")
 
 
-def eval_cf_user():
+def eval_cf_user_matrix():
     # Carica il dataset MovieLens
     df_movies, df_ratings, _ = load_movielens_data("dataset/")
 
@@ -92,39 +92,40 @@ def eval_cf_user():
     os.makedirs("models", exist_ok=True)
     evaluation_output: list = []
 
-    NN = 50  # Numero di vicini da considerare (potrebbe essere ridotto per test)
+    NN_list = [5, 10, 15, 20, 30, 40, 50]  # Numero di vicini da considerare (potrebbe essere ridotto per test)
+    for NN in NN_list:
+        # 5. Inizializza il modello CollaborativeRecommender **passando la matrice e train_matrix**
+        knn_model_pearson_item = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=NN + 1, n_jobs=-1)
+        knn_model_pearson_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=NN + 1, n_jobs=-1)
+        recomm = CollaborativeRecommender(knn_model_pearson_item, knn_model_pearson_user, user_similarity_matrix, utility_matrix)
+        recomm.fit_user_model(train_matrix)
+        recomm.fit_item_model(train_matrix)
 
-    # 5. Inizializza il modello CollaborativeRecommender **passando la matrice e train_matrix**
-    knn_model_pearson_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=NN, n_jobs=-1)  # Potresti non usarlo se ti concentri solo su user-based
-    knn_model_pearson_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=NN, n_jobs=-1)  # Potresti non usarlo se ti concentri solo su user-based
-    recomm = CollaborativeRecommender(knn_model_pearson_user, knn_model_pearson_user, user_similarity_matrix, utility_matrix)  # Passa matrice e train_matrix
-    recomm.fit_user_model(train_matrix)
-    recomm.fit_item_model(train_matrix)
+        # Predizioni per il **TEST SET** (corretto!)
+        train_predictions_dict = recomm.compute_predictions_on_train(NN, train_matrix)
 
-    # Predizioni per il **TEST SET** (corretto!)
-    train_predictions_dict = recomm.compute_predictions_on_train(NN, train_matrix)
+        mae, rmse = eval_mae_rmse(test_matrix, train_predictions_dict)
 
-    mae, rmse = eval_mae_rmse(test_matrix, train_predictions_dict)
+        evaluation_output.append(f"\### Risultati MAE e RMSE ###")
+        evaluation_output.append(f"  MAE: {mae:.10f}")
+        evaluation_output.append(f"  RMSE: {rmse:.10f}\n")
 
-    evaluation_output.append(f"\### Risultati MAE e RMSE ###")
-    evaluation_output.append(f"  MAE: {mae:.10f}")
-    evaluation_output.append(f"  RMSE: {rmse:.10f}\n")
+        print(f"\### Risultati MAE e RMSE ###")
+        print(f"  MAE: {mae:.10f}")
+        print(f"  RMSE: {rmse:.10f}\n")
 
-    print(f"\### Risultati MAE e RMSE ###")
-    print(f"  MAE: {mae:.10f}")
-    print(f"  RMSE: {rmse:.10f}\n")
-
-    # Salva i risultati su file
-    model_name = f"knn_model_NN{NN}_pearson_user_matrix"  # Nome modello più descrittivo
-    with open(f"results/{model_name}.txt", "w") as f:
-        f.write("\n" + "=" * 70 + "\n")
-        f.write(f"Evaluation Date: {datetime.datetime.now()}\n")
-        for line in evaluation_output:
-            f.write(line + "\n")
-        f.write("=" * 70 + "\n")
+        # Salva i risultati su file
+        model_name = f"knn_offline_model_NN{NN}_pearson_user_matrix"  # Nome modello più descrittivo
+        with open(f"results/{model_name}.txt", "w") as f:
+            f.write("\n" + "=" * 70 + "\n")
+            f.write(f"Evaluation Date: {datetime.datetime.now()}\n")
+            for line in evaluation_output:
+                f.write(line + "\n")
+            f.write("=" * 70 + "\n")
 
 
-def test_cf_user():
+# ******************************************************************************************************************** #
+def eval_cf_user_knn():
     # Carica il dataset MovieLens
     df_movies, df_ratings, _ = load_movielens_data("dataset/")
 
@@ -132,20 +133,46 @@ def test_cf_user():
     utility_matrix = df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
     print(f"Dimensioni utility matrix: {utility_matrix.shape}")
 
-    # Calcola la matrice di similarità utente-utente
-    user_similarity_matrix: pd.DataFrame = compute_user_similarity_matrix(utility_matrix)
-    print(f"Dimensioni user_similarity_matrix: {user_similarity_matrix.shape}")
+    # Splitting in training e test matrix
+    train_matrix, test_matrix = get_train_valid_test_matrix(df_ratings, utility_matrix.columns, utility_matrix.index, ret_valid=False)
 
-    print(f"user_similarity_matrix: {user_similarity_matrix.shape}")
-    knn_model_pearson_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=20, n_jobs=-1)  # Potresti non usarlo se ti concentri solo su user-based
-    knn_model_pearson_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=20, n_jobs=-1)  # Potresti non usarlo se ti concentri solo su user-based
-    recomm = CollaborativeRecommender(knn_model_pearson_user, knn_model_pearson_user, user_similarity_matrix, utility_matrix)  # Passa matrice e train_matrix
+    # Crea directory per i risultati e i modelli
+    os.makedirs("results", exist_ok=True)
+    os.makedirs("models", exist_ok=True)
+    evaluation_output: list = []
 
-    temp_user = 1
-    temp_movie = 4262
+    NN_list = [5, 10, 15, 20, 30, 40, 50]  # Numero di vicini da considerare (potrebbe essere ridotto per test)
+    for NN in NN_list:
+        # 5. Inizializza il modello CollaborativeRecommender **passando la matrice e train_matrix**
+        knn_model_pearson_item = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=NN + 1, n_jobs=-1)
+        knn_model_pearson_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=NN + 1, n_jobs=-1)
+        recomm = CollaborativeRecommender(knn_model_pearson_item, knn_model_pearson_user, None, utility_matrix)  # Passa matrice e train_matrix
+        recomm.fit_user_model(train_matrix)
+        recomm.fit_item_model(train_matrix)
 
-    print(recomm.get_prediction(temp_user, temp_movie, NN=20))
+        # Predizioni per il **TEST SET** (corretto!)
+        train_predictions_dict = recomm.knn_compute_predictions_on_train(NN, train_matrix)
+
+        mae, rmse = eval_mae_rmse(test_matrix, train_predictions_dict)
+
+        evaluation_output.append(f"\### Risultati MAE e RMSE ###")
+        evaluation_output.append(f"  MAE: {mae:.10f}")
+        evaluation_output.append(f"  RMSE: {rmse:.10f}\n")
+
+        print(f"\### Risultati MAE e RMSE ###")
+        print(f"  MAE: {mae:.10f}")
+        print(f"  RMSE: {rmse:.10f}\n")
+
+        # Salva i risultati su file
+        model_name = f"knn_online_model_NN{NN}_pearson_user_matrix"  # Nome modello più descrittivo
+        with open(f"results/{model_name}.txt", "w") as f:
+            f.write("\n" + "=" * 70 + "\n")
+            f.write(f"Evaluation Date: {datetime.datetime.now()}\n")
+            for line in evaluation_output:
+                f.write(line + "\n")
+            f.write("=" * 70 + "\n")
 
 
 if __name__ == "__main__":
-    eval_cf_user()
+    # eval_cf_user_matrix()
+    eval_cf_user_knn()
