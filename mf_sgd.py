@@ -235,9 +235,9 @@ class MF_SGD_User_Based:
         self._predictions_train = self._compute_predictions_on_train()
         print("Predizioni per tutti gli utenti calcolate con successo.")
 
-    def get_recommendations(self, matrix: pd.DataFrame, user_id: pd.Index) -> pd.DataFrame:
+    def get_recommendations(self, matrix: pd.DataFrame, user_id: pd.Index, exclude: bool = True) -> pd.DataFrame:
         """Restituisce le predizioni per l'utente specificato."""
-        return self._get_predictions(user_id, matrix, exclude=True)
+        return self._get_predictions(user_id, matrix, exclude=exclude)
 
     @classmethod
     def load_model(cls, filepath):

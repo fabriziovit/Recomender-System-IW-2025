@@ -128,7 +128,7 @@ def _start_rounds_cf_user(
         curr_arm: int = bandit_mab.play()
 
         # Epsilon decay
-        bandit_mab.linear_epsilon_decay(num_round=i, decay=0.001)
+        bandit_mab._log_epsilon_decay(num_round=i, decay=0.001)
 
         curr_movie_id: int = df_recommendations.iloc[curr_arm]["movieId"]
         curr_movie_title: str = df_recommendations.iloc[curr_arm]["title"]
@@ -191,7 +191,6 @@ def mab_on_collabfilter(
     recommender: CollaborativeRecommender = None,
     utility_matrix: pd.DataFrame = None,
 ) -> list:
-    
     """Simula il bandit su un recommender Collaborative Filtering (user-based o item-based)."""
     if not movie_id and not user_id:
         raise ValueError("Almeno movie_id o user_id devono essere specificati")

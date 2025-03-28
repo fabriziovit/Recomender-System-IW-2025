@@ -85,17 +85,19 @@ class EpsGreedyMAB(MAB):
         self._qvalues = np.full(n_arms, Q0)  # Per decidere quale braccio "sfruttare" (exploitation)
         self._rewards_list = np.zeros(n_arms)
         self._clicks = np.zeros(n_arms)
+        self._nexploitation = 0  # Numero di sfruttamenti effettuati
+        self._nexploration = 0  # Numero di esplorazioni effettuate
 
     def play(self, context: Optional[np.ndarray] = None) -> int:
         """Deve restituire un braccio (arm) da selezionare."""
         super().play(context)
         p = np.random.uniform(0, 1)
-        if p <= self._epsilon:  #! Exploration
-            # print(f"Exploration con p: {p}")
+        if p <= self._epsilon:  # Exploration
+            self._nexploration += 1
             arm = np.random.randint(0, self._n_arms)
-        else:  #! Exploitation
+        else:  # Exploitation
+            self._nexploitation += 1
             arm = get_best_arm(self._qvalues)
-            # print(f"Exploitation con best arm: {arm}")
         return arm
 
     def update(self, arm: int, reward: float, context: Optional[np.ndarray] = None) -> None:
@@ -127,23 +129,26 @@ class EpsGreedyMAB(MAB):
     def get_epsilon(self) -> float:
         return self._epsilon
 
-    def _update_epsilon(self, epsilon: float) -> None:
-        if not (0 <= epsilon <= 1):
-            raise ValueError("epsilon must be in [0,1]")
-        if not isinstance(epsilon, float):
-            raise TypeError("epsilon must be float")
-        self._epsilon = epsilon
-
-    def linear_epsilon_decay(self, num_round: int, decay: float = 0.001) -> None:
-        initial_epsilon = self.get_epsilon()
-        epsilon = initial_epsilon * (1 - (decay * num_round))
-        print(f"epsilon: {epsilon}")
-        if epsilon > 0.1:  # Epsilon minimo
-            self._update_epsilon(epsilon)
-
     def get_top_n(self) -> list[tuple[int, float]]:
         # Creiamo una lista di tuple (indice, Q-value)
         qvalues_with_indices = list(zip(range(self.get_narms()), self.get_qvalues()))
         # Ordiniamo la lista in base al Q-value
         qvalues_with_indices_sorted = sorted(qvalues_with_indices, key=lambda x: x[1], reverse=True)
         return qvalues_with_indices_sorted
+
+    def set_epsilon_deacy(self, function: callable) -> None:
+        """Setta la funzione di decay dell'epsilon."""
+        if not callable(function):
+            raise TypeError("function must be callable")
+        self._epsilon_decay_function = function
+
+    def update_epsilon(self, num_round) -> None:
+        new_epsilon = self._epsilon_decay_function(self._epsilon, num_round)
+        if not isinstance(new_epsilon, float):
+            raise TypeError("epsilon must be float")
+        if 0.1 <= new_epsilon <= 1.0:
+            if new_epsilon > 0.1:  # Aggiorno solo se epsilon > 0.1
+                print(f"epsilon: {new_epsilon}")
+                self._epsilon = new_epsilon
+
+

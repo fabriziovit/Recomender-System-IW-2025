@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from typing import Union
 from scipy.stats import pearsonr
@@ -105,3 +106,18 @@ def min_max_normalize(values: Union[int, float, pd.Series], min_val: float = Non
         return (values - min_val) / (max_val - min_val)
     else:
         raise ValueError("min_max_normalize_mean accetta solo int, float o pd.Series.")
+
+
+def linear_epsilon_decay(epsilon: float, num_round: int, decay: float = 0.001) -> float:
+    curr_epsilon = epsilon
+    return curr_epsilon - (num_round * decay)  # lineare
+
+
+def log_epsilon_decay(epsilon: float, num_round: int, decay: float = 0.001) -> float:
+    curr_epsilon = epsilon
+    return curr_epsilon / (1 + np.log(num_round + 1))  # logaritmico
+
+
+def exp_epsilon_decay(epsilon: float, num_round: int, decay: float = 0.999) -> float:
+    initial_epsilon = epsilon
+    return initial_epsilon * (decay**num_round)  # esponenziale
