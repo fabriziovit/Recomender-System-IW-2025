@@ -399,7 +399,7 @@ async function getSGDRecommandation() {
   }
 }
 
-async function getSGDRecommandationMab() {
+async function getSGDRecommandationMabLog() {
   const userId = document.getElementById('SGDMabId').value;
   if (!userId) {
     displayError('SGDMabMovieResults', 'Please enter a User ID');
@@ -408,7 +408,7 @@ async function getSGDRecommandationMab() {
 
   showLoading('SGDMabLoading');
   try {
-    const response = await fetch(`${API_URL}/recommend/sgd_mab`, {
+    const response = await fetch(`${API_URL}/recommend/sgd_mab_log`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: parseInt(userId) }),
@@ -1698,7 +1698,7 @@ document.getElementById('SGDId').addEventListener('keydown', (e) => {
 });
 
 document.getElementById('SGDMabId').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') getSGDRecommandationMab();
+  if (e.key === 'Enter') getSGDRecommandationMabLog();
 });
 
 document

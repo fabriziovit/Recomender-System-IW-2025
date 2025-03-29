@@ -49,11 +49,12 @@ def _start_rounds(df_expected: pd.DataFrame, bandit_mab: EpsGreedyMAB, num_round
         # La reward corrisponde alla predizione del film selezionato
         reward = df_expected.iloc[curr_arm]["values"]
 
+        '''
         print(f"Round {i}:")
         print(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
         print(f"  - Reward: {reward:.3f}, epsilon: {bandit_mab.get_epsilon():.3f}")
         print(f"  - function: {bandit_mab._epsilon_decay_function.__name__}")
-
+        '''
         # Aggiorna epsilon ad ogni round
         bandit_mab.update_epsilon(i)
 
