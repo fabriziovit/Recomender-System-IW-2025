@@ -15,7 +15,7 @@ def _print_final_stats(df_merged: pd.DataFrame, bandit_mab: EpsGreedyMAB) -> Non
 
         print(
             f"  - Arm {curr_arm}: (Movie ID {curr_movie_id}, '{curr_movie_title}') "
-            f"con Q = {bandit_mab.get_qvalues()[curr_arm]:.2f}, reward_tot = {bandit_mab.get_rewards_list()[curr_arm]:.2f}"
+            f"con Q = {bandit_mab.get_qvalues()[curr_arm]:.2f}, reward_tot = {bandit_mab.get_total_rewards_list()[curr_arm]:.2f}"
             f" e selezionato {bandit_mab.get_clicks_for_arm()[curr_arm]} volte"
         )
     print(f"num_exploration: {bandit_mab._nexploration}")
@@ -32,7 +32,6 @@ def _get_top_movies(bandit_mab: EpsGreedyMAB, df_merged: pd.DataFrame) -> list:
     return topk
 
 
-# *** Collaborative Filtering User-based *** #
 def _start_rounds(df_expected: pd.DataFrame, bandit_mab: EpsGreedyMAB, num_rounds: int) -> None:
 
     for i in range(0, num_rounds):
@@ -51,7 +50,7 @@ def _start_rounds(df_expected: pd.DataFrame, bandit_mab: EpsGreedyMAB, num_round
 
         print(f"Round {i}:")
         print(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
-        print(f"  - Reward: {reward:.3f}, epsilon: {bandit_mab.get_epsilon():.3f}")
+        print(f"  - Reward: {reward:.3f}, epsilon: {bandit_mab.get_curr_epsilon():.3f}")
         print(f"  - function: {bandit_mab._epsilon_decay_function.__name__}")
 
         # Aggiorna epsilon ad ogni round
@@ -79,7 +78,7 @@ def main():
     utility_matrix = df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
 
     # Carica il modello MF_SGD_User_Based
-    model_path = "./models/mf_model_n140_lr0.001_lambda1e-05_norm.pkl"
+    model_path = "./models/mf_model_n200_lr0.001_lambda0.0001_norm.pkl"
     recomm: MF_SGD_User_Based = MF_SGD_User_Based.load_model(model_path)
 
     # Utente da testare
@@ -98,7 +97,7 @@ def main():
     ret = {}
     for fun in [exp_epsilon_decay, log_epsilon_decay, linear_epsilon_decay]:
         print(f"Funzione di decay epsilon: {fun.__name__}")
-        bandit_mab = EpsGreedyMAB(n_arms=df_expected.shape[0], epsilon=0.9, Q0=0.0)
+        bandit_mab = EpsGreedyMAB(n_arms=df_expected.shape[0], epsilon=0.99, Q0=0.0)
         bandit_mab.set_epsilon_deacy(fun)
 
         top_k = mab(df_expected, bandit_mab, num_rounds=10_000)[:10]  #! Restituisce i primi 10 film raccomandati

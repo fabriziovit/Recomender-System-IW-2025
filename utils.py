@@ -108,16 +108,13 @@ def min_max_normalize(values: Union[int, float, pd.Series], min_val: float = Non
         raise ValueError("min_max_normalize_mean accetta solo int, float o pd.Series.")
 
 
-def linear_epsilon_decay(epsilon: float, num_round: int, decay: float = 0.001) -> float:
-    curr_epsilon = epsilon
-    return curr_epsilon - (num_round * decay)  # lineare
+def linear_epsilon_decay(initial_epsilon: float, num_round: int, decay: float = 0.00005) -> float:
+    return initial_epsilon - (num_round * decay)  # lineare
 
 
-def log_epsilon_decay(epsilon: float, num_round: int, decay: float = 0.001) -> float:
-    curr_epsilon = epsilon
-    return curr_epsilon / (1 + np.log(num_round + 1))  # logaritmico
+def log_epsilon_decay(initial_epsilon: float, num_round: int, decay_strength: float = 1.0) -> float:
+    return initial_epsilon / (1 + decay_strength * np.log(num_round + 1))  # logaritmico
 
 
-def exp_epsilon_decay(epsilon: float, num_round: int, decay: float = 0.999) -> float:
-    initial_epsilon = epsilon
+def exp_epsilon_decay(initial_epsilon: float, num_round: int, decay: float = 0.9995) -> float:
     return initial_epsilon * (decay**num_round)  # esponenziale

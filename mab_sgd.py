@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from epsilon_mab import EpsGreedyMAB
 from mf_sgd import MF_SGD_User_Based
-from utils import load_movielens_data, min_max_normalize
+from utils import min_max_normalize
 
 
 def _print_info_rounds(i: int, curr_arm: int, curr_movie_id: int, curr_movie_title: str, reward: float) -> None:
@@ -20,7 +20,7 @@ def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFram
 
         print(
             f"  - Arm {curr_arm}: (Movie ID {curr_movie_id}, '{curr_movie_title}') "
-            f"con Q = {bandit_mab.get_qvalues()[curr_arm]:.2f}, reward_tot = {bandit_mab.get_rewards_list()[curr_arm]:.2f}"
+            f"con Q = {bandit_mab.get_qvalues()[curr_arm]:.2f}, reward_tot = {bandit_mab.get_total_rewards_list()[curr_arm]:.2f}"
             f" e selezionato {bandit_mab.get_clicks_for_arm()[curr_arm]} volte"
         )
 

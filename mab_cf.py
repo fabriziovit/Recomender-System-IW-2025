@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 from cf_recommender import CollaborativeRecommender
 from epsilon_mab import EpsGreedyMAB
-from utils import load_movielens_data, pearson_distance, min_max_normalize
+from utils import min_max_normalize
 
 
 def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame) -> None:
@@ -16,7 +16,7 @@ def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFram
 
         print(
             f"  - Arm {curr_arm}: (Movie ID {curr_movie_id}, '{curr_movie_title}') "
-            f"con Q = {bandit_mab.get_qvalues()[curr_arm]:.2f}, reward_tot = {bandit_mab.get_rewards_list()[curr_arm]:.2f}"
+            f"con Q = {bandit_mab.get_qvalues()[curr_arm]:.2f}, reward_tot = {bandit_mab.get_total_rewards_list()[curr_arm]:.2f}"
             f" e selezionato {bandit_mab.get_clicks_for_arm()[curr_arm]} volte"
         )
 
