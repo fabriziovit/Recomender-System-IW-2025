@@ -75,15 +75,16 @@ class EpsGreedyMAB(MAB):
 
     def __init__(self, n_arms: int = 10, n_dims: Optional[int] = None, epsilon: float = 0.1, Q0: float = 0.0):
         super().__init__(n_arms, n_dims)
-        if not (0 <= epsilon <= 1):
+        if not (0.0 <= epsilon <= 1.0):
             raise ValueError("epsilon must be in [0,1]")
         if not isinstance(epsilon, float):
             raise TypeError("epsilon must be float")
         if not isinstance(Q0, float):
             raise TypeError("Q0 must be a float")
-        self._epsilon = epsilon
+        self._initial_epsilon = epsilon
+        self._curr_epsilon = epsilon
         self._qvalues = np.full(n_arms, Q0)  # Per decidere quale braccio "sfruttare" (exploitation)
-        self._rewards_list = np.zeros(n_arms)
+        self._total_rewards = np.zeros(n_arms)
         self._clicks = np.zeros(n_arms)
         self._nexploitation = 0  # Numero di sfruttamenti effettuati
         self._nexploration = 0  # Numero di esplorazioni effettuate
@@ -92,7 +93,7 @@ class EpsGreedyMAB(MAB):
         """Deve restituire un braccio (arm) da selezionare."""
         super().play(context)
         p = np.random.uniform(0, 1)
-        if p <= self._epsilon:  # Exploration
+        if p <= self._curr_epsilon:  # Exploration
             self._nexploration += 1
             arm = np.random.randint(0, self._n_arms)
         else:  # Exploitation
@@ -104,9 +105,9 @@ class EpsGreedyMAB(MAB):
         """Aggiorna il valore del braccio selezionato con la ricompensa ottenuta."""
         super().update(arm, reward, context)
         self._clicks[arm] += 1
-        self._rewards_list[arm] += reward
+        self._total_rewards[arm] += reward
         # Mantiene la media delle ricompense osservate per ogni braccio.
-        self._qvalues[arm] = self._rewards_list[arm] / self._clicks[arm]
+        self._qvalues[arm] = self._total_rewards[arm] / self._clicks[arm]
 
     def get_narms(self) -> int:
         return self._n_arms
@@ -117,17 +118,14 @@ class EpsGreedyMAB(MAB):
     def get_qvalues(self) -> np.ndarray:
         return self._qvalues
 
-    def get_last_reward(self):
-        return self._reward
-
-    def get_rewards_list(self) -> np.ndarray:
-        return self._rewards_list
+    def get_total_rewards_list(self) -> np.ndarray:
+        return self._total_rewards
 
     def get_clicks_for_arm(self) -> np.ndarray:
         return self._clicks
 
-    def get_epsilon(self) -> float:
-        return self._epsilon
+    def get_curr_epsilon(self) -> float:
+        return self._curr_epsilon
 
     def get_top_n(self) -> list[tuple[int, float]]:
         # Creiamo una lista di tuple (indice, Q-value)
@@ -143,12 +141,12 @@ class EpsGreedyMAB(MAB):
         self._epsilon_decay_function = function
 
     def update_epsilon(self, num_round) -> None:
-        new_epsilon = self._epsilon_decay_function(self._epsilon, num_round)
-        if not isinstance(new_epsilon, float):
+        if not hasattr(self, "_epsilon_decay_function"):
+            raise ValueError("epsilon decay function not set")
+        new_epsilon = self._epsilon_decay_function(self._initial_epsilon, num_round)
+        if not isinstance(new_epsilon, (float, np.floating)):
             raise TypeError("epsilon must be float")
-        if 0.1 <= new_epsilon <= 1.0:
-            if new_epsilon > 0.1:  # Aggiorno solo se epsilon > 0.1
-                print(f"epsilon: {new_epsilon}")
-                self._epsilon = new_epsilon
-
-
+        # Assicura che epsilon sia tra 0 e 1 (Clamping)
+        new_epsilon = max(0.0, min(1.0, new_epsilon))
+        print(f"epsilon: {new_epsilon}")
+        self._curr_epsilon = new_epsilon
