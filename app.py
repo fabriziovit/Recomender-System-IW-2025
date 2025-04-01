@@ -184,10 +184,63 @@ class MovieRecommenderApp:
         df_expected.reset_index(drop=False, inplace=True)
         df_expected.set_index(new_index, inplace=True)
 
-        bandit_mab = EpsGreedyMAB(n_arms=df_expected.shape[0], epsilon=0.9, Q0=0.0)
+        bandit_mab = EpsGreedyMAB(n_arms=df_expected.shape[0], epsilon=0.9, Q0=0.0)#! vedere valore epsilon
         bandit_mab.set_epsilon_deacy(log_epsilon_decay)
 
-        top_k = mab(df_expected, bandit_mab, num_rounds=10_000)[:10]
+        top_k = mab(df_expected, bandit_mab, num_rounds=10_000)[:top_n]
+        return top_k
+
+    def run_mab_sgd_model_exp_epsilon_decay(self, user_id: int, top_n: int = 10) -> pd.DataFrame: #Da aggiungere chiamata api
+        if not self.sgd_initialized:
+            self.initialize_sgd_recommender()
+            if not self.sgd_initialized:
+                return pd.DataFrame()
+        df_expected = self.sgd_model.get_recommendations(self.utility_matrix, user_id)
+        df_expected = df_expected.merge(self.df_movies, on="movieId")[["title", "values"]].sort_index(ascending=True)
+        # Imposta l'indice per renderlo compatibile con il bandit
+        new_index = pd.RangeIndex(df_expected.shape[0], name="idxarm")
+        df_expected.reset_index(drop=False, inplace=True)
+        df_expected.set_index(new_index, inplace=True)
+
+        bandit_mab = EpsGreedyMAB(n_arms=df_expected.shape[0], epsilon=0.9, Q0=0.0)#! vedere valore epsilon
+        bandit_mab.set_epsilon_deacy(exp_epsilon_decay)
+
+        top_k = mab(df_expected, bandit_mab, num_rounds=10_000)[:top_n]
+        return top_k
+    
+    def run_mab_sgd_model_linear_epsilon_decay(self, user_id: int, top_n: int = 10) -> pd.DataFrame: #Da aggiungere chiamata api
+        if not self.sgd_initialized:
+            self.initialize_sgd_recommender()
+            if not self.sgd_initialized:
+                return pd.DataFrame()
+        df_expected = self.sgd_model.get_recommendations(self.utility_matrix, user_id)
+        df_expected = df_expected.merge(self.df_movies, on="movieId")[["title", "values"]].sort_index(ascending=True)
+        # Imposta l'indice per renderlo compatibile con il bandit
+        new_index = pd.RangeIndex(df_expected.shape[0], name="idxarm")
+        df_expected.reset_index(drop=False, inplace=True)
+        df_expected.set_index(new_index, inplace=True)
+
+        bandit_mab = EpsGreedyMAB(n_arms=df_expected.shape[0], epsilon=0.9, Q0=0.0)#! vedere valore epsilon
+        bandit_mab.set_epsilon_deacy(linear_epsilon_decay)
+
+        top_k = mab(df_expected, bandit_mab, num_rounds=10_000)[:top_n]
+        return top_k
+    
+    def run_mab_fixed_epsilon(self, user_id: int, top_n: int = 10, epsilon: float = 0.1) -> pd.DataFrame:
+        if not self.sgd_initialized:
+            self.initialize_sgd_recommender()
+            if not self.sgd_initialized:
+                return pd.DataFrame()
+        df_expected = self.sgd_model.get_recommendations(self.utility_matrix, user_id)
+        df_expected = df_expected.merge(self.df_movies, on="movieId")[["title", "values"]].sort_index(ascending=True)
+        # Imposta l'indice per renderlo compatibile con il bandit
+        new_index = pd.RangeIndex(df_expected.shape[0], name="idxarm")
+        df_expected.reset_index(drop=False, inplace=True)
+        df_expected.set_index(new_index, inplace=True)
+
+        bandit_mab = EpsGreedyMAB(n_arms=df_expected.shape[0], epsilon=epsilon, Q0=0.0)
+
+        top_k = mab(df_expected, bandit_mab, num_rounds=10_000, decay=False)[:top_n]
         return top_k
 
     def run_sgd_predictions(self, user_id: int, utility_matrix: pd.DataFrame) -> float:
@@ -485,8 +538,8 @@ def sgd_recommendations():
     return jsonify(json_response)
 
 
-@app.route("/recommend/sgd_mab_log", methods=["POST"])
-def mab_sgd_log_epsilon_recommendations():
+@app.route("/recommend/sgd_mab_exp", methods=["POST"])
+def mab_sgd_exp_epsilon_recommendations():
     data = request.get_json()
     user_id = data.get("user_id", 0)
     top_n = data.get("top_n", 10)
@@ -497,7 +550,7 @@ def mab_sgd_log_epsilon_recommendations():
     if user_id > 610:
         return jsonify({"error": True, "message": f"User with ID {user_id} not found."}), 404
 
-    results_ids = app_instance.run_mab_sgd_model_log_epsilon_decay(user_id, top_n)
+    results_ids = app_instance.run_mab_sgd_model_exp_epsilon_decay(user_id, top_n)
 
     ordered_results = []
 
@@ -515,6 +568,38 @@ def mab_sgd_log_epsilon_recommendations():
     json_response = {"userId": user_id, "results": results}
     return jsonify(json_response)
 
+@app.route("/recommend/sgd_mab_fixed", methods=["POST"])
+def mab_sgd_fixed_epsilon_recommendations():
+    data = request.get_json()
+    user_id = data.get("user_id", 0)
+    top_n = data.get("top_n", 10)
+    epsilon = data.get("epsilon", 0.1)
+    epsilon = float(epsilon)  # Assicurati che epsilon sia un float
+
+    if user_id <= 0:
+        return jsonify({"error": True, "message": "User ID must be a positive integer."}), 404
+
+    if user_id > 610:
+        return jsonify({"error": True, "message": f"User with ID {user_id} not found."}), 404
+
+    results_ids = app_instance.run_mab_fixed_epsilon(user_id, top_n, epsilon)
+    print(f"results_ids: {results_ids}")
+
+    ordered_results = []
+
+    # Itera attraverso gli ID nell'ordine originale
+    for movie_id in results_ids:
+        movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
+        if not movie_row.empty:
+            # Converti il DataFrame row in un dict
+            movie_dict = movie_row.iloc[0].to_dict()
+            # Converti tutti i valori NumPy in tipi Python standard
+            ordered_results.append({k: v.item() if isinstance(v, np.number) else v for k, v in movie_dict.items()})
+
+    # La lista ordered_results ora contiene i dizionari nell'ordine originale
+    results = ordered_results
+    json_response = {"userId": user_id, "results": results}
+    return jsonify(json_response)
 
 @app.route("/predict", methods=["POST"])
 def predict():

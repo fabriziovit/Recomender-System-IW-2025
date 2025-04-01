@@ -141,7 +141,7 @@ def eval_cf_user_knn():
     os.makedirs("models", exist_ok=True)
     evaluation_output: list = []
 
-    NN_list = [5, 10, 15, 20, 30, 40, 50]  # Numero di vicini da considerare (potrebbe essere ridotto per test)
+    NN_list = [30, 40, 50]  # Numero di vicini da considerare (potrebbe essere ridotto per test)
     for NN in NN_list:
         # 5. Inizializza il modello CollaborativeRecommender **passando la matrice e train_matrix**
         knn_model_pearson_item = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=NN + 1, n_jobs=-1)

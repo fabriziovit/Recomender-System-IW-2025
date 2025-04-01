@@ -32,7 +32,7 @@ def _get_top_movies(bandit_mab: EpsGreedyMAB, df_merged: pd.DataFrame) -> list:
     return topk
 
 
-def _start_rounds(df_expected: pd.DataFrame, bandit_mab: EpsGreedyMAB, num_rounds: int) -> None:
+def _start_rounds(df_expected: pd.DataFrame, bandit_mab: EpsGreedyMAB, num_rounds: int, decay: bool= True) -> None:
 
     for i in range(0, num_rounds):
 
@@ -54,17 +54,19 @@ def _start_rounds(df_expected: pd.DataFrame, bandit_mab: EpsGreedyMAB, num_round
         print(f"  - Reward: {reward:.3f}, epsilon: {bandit_mab.get_curr_epsilon():.3f}")
         print(f"  - function: {bandit_mab._epsilon_decay_function.__name__}")
         '''
-        # Aggiorna epsilon ad ogni round
-        bandit_mab.update_epsilon(i)
+
+        if decay:
+            # Aggiorna epsilon ad ogni round
+            bandit_mab.update_epsilon(i)
 
         # Aggiorna il bandit con la reward calcolata
         bandit_mab.update(curr_arm, reward)
 
 
-def mab(df_expected: pd.DataFrame, bandit_mab: EpsGreedyMAB, num_rounds: int = 10_000) -> list:
+def mab(df_expected: pd.DataFrame, bandit_mab: EpsGreedyMAB, num_rounds: int = 10_000, decay:bool = True) -> list:
 
     # Simulazione del gioco
-    _start_rounds(df_expected, bandit_mab, num_rounds)
+    _start_rounds(df_expected, bandit_mab, num_rounds, decay)
     _print_final_stats(df_expected, bandit_mab)
 
     # Recupera i top k film raccomandati con il bandit

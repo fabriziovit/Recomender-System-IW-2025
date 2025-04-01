@@ -110,6 +110,9 @@ def get_title_by_movie_id(csv_file, movie_id):
 def get_release_year_from_wikidata(film_title, director_name):
     """Ottiene l'anno di uscita di un film da Wikidata, filtrando per titolo e regista."""
     sparql = SPARQLWrapper("https://query.wikidata.org/sparql")
+
+    sparql.addCustomHttpHeader('User-Agent', 'MyRecommederSystem/1.0 (your@email.com)')
+
     query = f"""
     PREFIX wd: <http://www.wikidata.org/entity/>
     PREFIX wdt: <http://www.wikidata.org/prop/direct/>
