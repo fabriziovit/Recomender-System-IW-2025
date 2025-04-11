@@ -26,7 +26,7 @@ def eval_mae_rmse(test_matrix: pd.DataFrame, predictions_dict: dict) -> tuple:
     return mae, rmse
 
 
-def eval_precision_recall(train_ratings_matrix, test_ratings_matrix, K_list, relevant_value, precomputed_predictions: dict) -> dict:
+def eval_precision_recall(train_ratings_matrix, test_ratings_matrix, NN, K_list, relevant_value, precomputed_predictions: dict) -> dict:
     """Valuta il recommender user-based utilizzando Precision@K e Recall@K per ciascun valore di K in K_list."""
     results = {}
     evaluation_output = []
@@ -65,18 +65,15 @@ def eval_precision_recall(train_ratings_matrix, test_ratings_matrix, K_list, rel
         else:
             avg_precision, avg_recall = 0, 0
 
-        evaluation_output.append(f"\n@@@ Test Valutazione User-Based (con K = {K} e value = {relevant_value}) @@@")
+        evaluation_output.append(f"\n@@@ Test Valutazione User-Based (con NN = {NN}, K = {K} e value = {relevant_value}) @@@")
         evaluation_output.append(f"Numero utenti valutati: {user_count}")
         evaluation_output.append(f"Precision@{K}: {avg_precision:.10f}")
         evaluation_output.append(f"Recall@{K}: {avg_recall:.10f}\n")
-        print(f"\n@@@ Test Valutazione User-Based (con K = {K} e value = {relevant_value}) @@@")
-        print(f"Numero utenti valutati: {user_count}")
-        print(f"Precision@{K}: {avg_precision:.10f}")
-        print(f"Recall@{K}: {avg_recall:.10f}\n")
+        # Salva i risultati per ciascun K
         results[K] = (avg_precision, avg_recall)
 
     # Scrittura del report (opzionale)
-    with open(f"knn_acc{relevant_value}_NN{K}.txt", "w") as f:
+    with open(f"knn_{relevant_value}_NN{NN}.txt", "w") as f:
         f.write("\n" + "=" * 70 + "\n")
         f.write(f"Evaluation Date: {datetime.datetime.now()}\n")
         for line in evaluation_output:

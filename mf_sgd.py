@@ -118,7 +118,7 @@ class MF_SGD_User_Based:
         """Calcola le predizioni sul training set"""
         all_user_predictions_evaluation = {}
         for user_id in self._train_matrix.index:
-            all_user_predictions_evaluation[user_id] = self._get_predictions(user_id, self._train_matrix, exclude=False)
+            all_user_predictions_evaluation[user_id] = self._get_predictions(user_id, self._train_matrix, exclude=True)
         return all_user_predictions_evaluation
 
     def _stochastic_gradient_descent(self, num_factors: int, learning_rate: float, lambda_term: float, refit: bool = False, evaluation_output: list = None) -> None:

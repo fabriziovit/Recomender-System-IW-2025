@@ -83,6 +83,7 @@ class EpsGreedyMAB(MAB):
             raise TypeError("Q0 must be a float")
         self._initial_epsilon = epsilon
         self._curr_epsilon = epsilon
+        self._epsilon_decay_function = None  # Funzione di decay dell'epsilon
         self._qvalues = np.full(n_arms, Q0)  # Per decidere quale braccio "sfruttare" (exploitation)
         self._total_rewards = np.zeros(n_arms)
         self._clicks = np.zeros(n_arms)
