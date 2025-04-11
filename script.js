@@ -150,6 +150,43 @@ async function getContentRecommendations() {
   }
 }
 
+async function getSGDRecommandationMabFixed() {
+  const userId = document.getElementById('SGDMabFixedId').value;
+  const epsilon = document.getElementById('SGDMabFixedEpsilon').value;
+  if (!userId) {
+    displayError('SGDMabFixedMovieResults', 'Please enter a User ID');
+    return;
+  }
+
+  showLoading('SGDMabFixedLoading');
+  try {
+    const response = await fetch(`${API_URL}/recommend/sgd_mab_fixed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: parseInt(userId), epsilon }),
+    });
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+      displayError(
+        'SGDMabFixedMovieResults',
+        data.message || 'Si è verificato un errore durante la richiesta'
+      );
+      return;
+    }
+
+    for (const movie of data.results) {
+      movie.title = shortenTitle(movie.title, 58);
+    }
+
+    displayResults('SGDMabFixedMovieResults', data, ['id', 'title', 'genres']);
+  } catch (error) {
+    displayError('SGDMabFixedMovieResults', 'Errore di connessione al server');
+  } finally {
+    hideLoading('SGDMabFixedLoading');
+  }
+}
+
 async function getContentRecommendationsWithMab() {
   const title = document.getElementById('contentTitleMab').value;
   if (!title) {
@@ -399,7 +436,7 @@ async function getSGDRecommandation() {
   }
 }
 
-async function getSGDRecommandationMab() {
+async function getSGDRecommandationMabExp() {
   const userId = document.getElementById('SGDMabId').value;
   if (!userId) {
     displayError('SGDMabMovieResults', 'Please enter a User ID');
@@ -408,7 +445,7 @@ async function getSGDRecommandationMab() {
 
   showLoading('SGDMabLoading');
   try {
-    const response = await fetch(`${API_URL}/recommend/sgd_mab`, {
+    const response = await fetch(`${API_URL}/recommend/sgd_mab_exp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: parseInt(userId) }),
@@ -421,6 +458,10 @@ async function getSGDRecommandationMab() {
         data.message || 'Si è verificato un errore durante la richiesta'
       );
       return;
+    }
+
+    for (const movie of data.results) {
+      movie.title = shortenTitle(movie.title, 58);
     }
 
     displayResults('SGDMabMovieResults', data, ['id', 'title', 'genres']);
@@ -1698,17 +1739,7 @@ document.getElementById('SGDId').addEventListener('keydown', (e) => {
 });
 
 document.getElementById('SGDMabId').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') getSGDRecommandationMab();
-});
-
-document
-  .getElementById('predictionMovieId')
-  .addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') getPrediction();
-  });
-
-document.getElementById('predictionUserId').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') getPrediction();
+  if (e.key === 'Enter') getSGDRecommandationMabLog();
 });
 
 document.getElementById('contentTitleMab').addEventListener('keydown', (e) => {
@@ -1724,13 +1755,35 @@ document.getElementById('userIdMAB').addEventListener('keydown', (e) => {
 });
 
 document
-  .getElementById('predictionUserIdKNN')
-  .addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') getPredictionKNN();
+  .querySelector('.section form[onsubmit*="getSGDRecommandationMabFixed"]')
+  .addEventListener('submit', (e) => {
+    e.preventDefault();
+    getSGDRecommandationMabFixed();
   });
 
+// Per il form SGD
 document
-  .getElementById('predictionMovieIdKNN')
-  .addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') getPredictionKNN();
+  .querySelector('.section form[onsubmit*="getPrediction"]')
+  .addEventListener('submit', (e) => {
+    e.preventDefault();
+    getPrediction();
   });
+
+// Per il form KNN
+document
+  .querySelector('.section form[onsubmit*="getPredictionKNN"]')
+  .addEventListener('submit', (e) => {
+    e.preventDefault();
+    getPredictionKNN();
+  });
+
+function enforceMinMax(el) {
+  if (el.value != '') {
+    if (parseInt(el.value) < parseInt(el.min)) {
+      el.value = el.min;
+    }
+    if (parseInt(el.value) > parseInt(el.max)) {
+      el.value = el.max;
+    }
+  }
+}
