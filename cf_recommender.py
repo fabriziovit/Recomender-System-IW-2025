@@ -58,6 +58,7 @@ class CollaborativeRecommender:
         else:
             print("# Modello model_user già addestrato su matrix (users x movies): Salto l'addestramento.")
 
+    # ************************************************************************************************ #
     def get_item_recommendations(self, movie_id: int, df_movies: pd.DataFrame) -> pd.DataFrame:
         """Raccomanda film simili a un film dato utilizzando il filtraggio collaborativo item-based."""
 
@@ -73,8 +74,12 @@ class CollaborativeRecommender:
         # Trova i film più simili usando il modello NearestNeighbors
         distances, pos_indexes = self.model_item.kneighbors(movie_features)
 
+        print(f"Distanze per il film {movie_id}: {distances.squeeze().tolist()[1:]}")
+        print(f"Indici posizionali per il film {movie_id}: {pos_indexes.squeeze().tolist()[1:]}")
+
         # Ricava gli ID dei film simili utilizzando gli indici posizionali
         similar_movies_list = [all_movie_ids[pos_idx] for pos_idx in pos_indexes.squeeze().tolist()[1:]]
+        print(f"Similar movies found for movie {movie_id}: {similar_movies_list}")
 
         # Salva le distanze item-item per il film specificato
         self.dist_items = pd.Series(distances.squeeze().tolist()[1:], index=similar_movies_list)
@@ -83,6 +88,7 @@ class CollaborativeRecommender:
         # Crea un DataFrame con le raccomandazioni dei film
         return df_movies.loc[similar_movies_list]
 
+    # ************************************************************************************************ #
     def get_user_recommendations(self, user_id: int, matrix: pd.DataFrame, df_movies: pd.DataFrame) -> pd.DataFrame:
         """Raccomanda film a un utente dato utilizzando il filtraggio collaborativo user-based."""
         if user_id not in matrix.index:
@@ -120,7 +126,7 @@ class CollaborativeRecommender:
 
     # ************************************************************************************************ #
 
-    def __get_similar_users(self, user_id: int, matrix: pd.DataFrame) -> list:
+    def _get_similar_users(self, user_id: int, matrix: pd.DataFrame) -> list:
         """Ottieni utenti simili usando la matrice di similarità."""
         all_user_ids = matrix.index
         user_feature = matrix.loc[user_id].values.reshape(1, -1)
@@ -132,7 +138,7 @@ class CollaborativeRecommender:
         self.dist_users = pd.Series(distances.squeeze()[1:], index=similar_users)
         return similar_users
 
-    def _knn_predict_rating(self, user_id: int, movie_id: int, matrix: pd.DataFrame, similar_users=None, similar_mean=None) -> float:
+    def _predict_rating(self, user_id: int, movie_id: int, matrix: pd.DataFrame, similar_users=None, similar_mean=None) -> float:
         """Predice il rating per un utente e un film utilizando knn (Vettorizzata)."""
         if user_id not in matrix.index:
             raise ValueError(f"User ID {user_id} not found in the matrix.")
@@ -143,7 +149,7 @@ class CollaborativeRecommender:
 
         # Recupero gli utenti simili solo se non sono già stati passati
         if similar_users is None:
-            similar_users = self.__get_similar_users(user_id, matrix)
+            similar_users = self._get_similar_users(user_id, matrix)
             similar_users_df = matrix.loc[similar_users]
             valid_ratings_mask = similar_users_df > 0.0
             similar_mean = similar_users_df.where(valid_ratings_mask).mean(axis=1)
@@ -168,11 +174,11 @@ class CollaborativeRecommender:
                 return target_user_mean
             raise ValueError(f"No valid ratings found for User ID {user_id}.")
 
-    def knn_get_prediction(self, user_id: int, movie_id: int) -> float:
+    def get_prediction(self, user_id: int, movie_id: int) -> float:
         """Calcola le predizioni per un utente specifico."""
-        return self._knn_predict_rating(user_id, movie_id, self.utility_matrix)
+        return self._predict_rating(user_id, movie_id, self.utility_matrix)
 
-    def _knn_get_predictions_on_train(self, user_id: int, train_matrix: pd.DataFrame, NN: int, exclude: bool = False) -> pd.Series:
+    def _get_predictions_on_train(self, user_id: int, train_matrix: pd.DataFrame, NN: int, exclude: bool = False) -> pd.Series:
         """Calcola le predizioni per un utente specifico."""
         if user_id not in train_matrix.index:
             raise ValueError(f"User ID {user_id} not found in the matrix.")
@@ -180,7 +186,7 @@ class CollaborativeRecommender:
         print(f"Predizione per utente {user_id}...")
 
         # Pre-calcola gli utenti simili una sola volta
-        similar_users = self.__get_similar_users(user_id, train_matrix)
+        similar_users = self._get_similar_users(user_id, train_matrix)
         similar_users_df = train_matrix.loc[similar_users]
         valid_ratings_mask = similar_users_df > 0.0
         similar_mean = similar_users_df.where(valid_ratings_mask).mean(axis=1)
@@ -192,12 +198,12 @@ class CollaborativeRecommender:
 
         # Calcola le predizioni passando gli utenti simili e le loro medie
         predicted_ratings_list = [
-            {"movieId": movie_id, "predicted_rating": self._knn_predict_rating(user_id, movie_id, train_matrix, similar_users, similar_mean)} for movie_id in movies_to_predict
+            {"movieId": movie_id, "predicted_rating": self._predict_rating(user_id, movie_id, train_matrix, similar_users, similar_mean)} for movie_id in movies_to_predict
         ]
 
         predictions_df = pd.DataFrame(predicted_ratings_list).set_index("movieId").rename(columns={"predicted_rating": "values"})
         return predictions_df.sort_values("values", ascending=False)
 
-    def knn_compute_predictions_on_train(self, NN, train_matrix, exclude=False) -> dict:
+    def compute_predictions_on_train(self, NN, train_matrix, exclude=False) -> dict:
         """Calcola le predizioni sul training set"""
-        return {user_id: self._knn_get_predictions_on_train(user_id, train_matrix, NN, exclude) for user_id in train_matrix.index}
+        return {user_id: self._get_predictions_on_train(user_id, train_matrix, NN, exclude) for user_id in train_matrix.index}

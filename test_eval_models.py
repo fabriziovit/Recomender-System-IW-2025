@@ -204,7 +204,7 @@ def knn_eval_precision_recall():
         recomm.fit_user_model(train_matrix, re_fit=True)
         print(f"# Modello addestrato con n_neighbors = {NN}")
 
-        computed_prediction: dict = recomm.knn_compute_predictions_on_train(NN, train_matrix, exclude=True)
+        computed_prediction: dict = recomm.compute_predictions_on_train(NN, train_matrix, exclude=True)
         print(f"###[1 test] type(computed_prediction): {type(computed_prediction)}")
         for user_id, prediction in computed_prediction.items():
             print(f"###[2 test] user_id: {user_id},type(prediction): {type(prediction)}")
