@@ -68,43 +68,38 @@
       </div>
     </div>
 
-    <!-- MAB Recommendations by userID -->
+    <!-- DBpedia Recommendations Category -->
     <div class="category-container">
       <h2 class="category-title">
-        <i class="fas fa-tags"></i> Recommendations by User using MAB
+        <i class="fas fa-database"></i> Recommendations by DBpedia
       </h2>
       <div class="sections-container">
         <div class="section">
-          <h2><i class="fas fa-magnifying-glass-chart"></i> Recommandation With MAB</h2>
-          <form onsubmit="getSGDRecommandationMabFixed(); return false;">
-            <div class="input-group">
-              <input type="number" id="SGDMabFixedId" placeholder="Enter User ID" />
-              <input type="number" id="SGDMabFixedEpsilon" placeholder="Enter Epsilon" value="0.1" step="0.01" max="1.0"
-                min="0.01" onkeyup="enforceMinMax(this)" />
-            </div>
-            <button type="submit">
-              <i class="fas fa-lightbulb"></i> Get Recommendations
-            </button>
-          </form>
-          <div id="SGDMabFixedLoading" class="loading">
+          <h2><i class="fas fa-video"></i> By Director (Movie)</h2>
+          <div class="input-group">
+            <input type="number" id="directorMovieId" placeholder="Enter movie ID" />
+          </div>
+          <button onclick="getDirectorMovieRecommendations()">
+            <i class="fas fa-lightbulb"></i> Get Recommendations
+          </button>
+          <div id="directorMovieLoading" class="loading">
             <i class="fas fa-spinner"></i>
           </div>
-          <div id="SGDMabFixedMovieResults" class="results"></div>
+          <div id="directorMovieResults" class="results"></div>
         </div>
 
         <div class="section">
-          <h2><i class="fas fa-magnifying-glass-chart"></i> Recommendations With MAB and epsilon decay (Exponential)
-          </h2>
+          <h2><i class="fas fa-user-tie"></i> By Director (Name)</h2>
           <div class="input-group">
-            <input type="number" id="SGDMabId" placeholder="Enter User ID" />
+            <input type="text" id="directorName" placeholder="Enter director name" />
           </div>
-          <button onclick="getSGDRecommandationMabExp()">
+          <button onclick="getDirectorNameRecommendations()">
             <i class="fas fa-lightbulb"></i> Get Recommendations
           </button>
-          <div id="SGDMabLoading" class="loading">
+          <div id="directorNameLoading" class="loading">
             <i class="fas fa-spinner"></i>
           </div>
-          <div id="SGDMabMovieResults" class="results"></div>
+          <div id="directorNameResults" class="results"></div>
         </div>
       </div>
     </div>
@@ -178,91 +173,98 @@
             <div id="SGDMovieResults" class="results"></div>
           </div>
         </div>
+      </div>
 
-        <!-- DBpedia Recommendations Category -->
-        <div class="category-container">
-          <h2 class="category-title">
-            <i class="fas fa-database"></i> Recommendations by DBpedia
-          </h2>
-          <div class="sections-container">
-            <div class="section">
-              <h2><i class="fas fa-video"></i> By Director (Movie)</h2>
+      <!-- MAB Recommendations by userID -->
+      <div class="category-container">
+        <h2 class="category-title">
+          <i class="fas fa-tags"></i> Recommendations by User using MAB
+        </h2>
+        <div class="sections-container">
+          <div class="section">
+            <h2><i class="fas fa-magnifying-glass-chart"></i> Recommandation With MAB</h2>
+            <form onsubmit="getSGDRecommandationMabFixed(); return false;">
               <div class="input-group">
-                <input type="number" id="directorMovieId" placeholder="Enter movie ID" />
+                <input type="number" id="SGDMabFixedId" placeholder="Enter User ID" />
+                <input type="number" id="SGDMabFixedEpsilon" placeholder="Enter Epsilon" value="0.1" step="0.01"
+                  max="1.0" min="0.01" onkeyup="enforceMinMax(this)" />
               </div>
-              <button onclick="getDirectorMovieRecommendations()">
+              <button type="submit">
                 <i class="fas fa-lightbulb"></i> Get Recommendations
               </button>
-              <div id="directorMovieLoading" class="loading">
-                <i class="fas fa-spinner"></i>
-              </div>
-              <div id="directorMovieResults" class="results"></div>
+            </form>
+            <div id="SGDMabFixedLoading" class="loading">
+              <i class="fas fa-spinner"></i>
             </div>
-
-            <div class="section">
-              <h2><i class="fas fa-user-tie"></i> By Director (Name)</h2>
-              <div class="input-group">
-                <input type="text" id="directorName" placeholder="Enter director name" />
-              </div>
-              <button onclick="getDirectorNameRecommendations()">
-                <i class="fas fa-lightbulb"></i> Get Recommendations
-              </button>
-              <div id="directorNameLoading" class="loading">
-                <i class="fas fa-spinner"></i>
-              </div>
-              <div id="directorNameResults" class="results"></div>
-            </div>
+            <div id="SGDMabFixedMovieResults" class="results"></div>
           </div>
-        </div>
-        <!-- Prediction Section -->
-        <div class="category-container">
-          <h2 class="category-title">
-            <i class="fas fa-star"></i> Get Prediction
-          </h2>
-          <div class="sections-container">
-            <div class="section">
-              <h2><i class="fas fa-star"></i> Prediction With SGD</h2>
-              <form onsubmit="getPrediction(); return false;">
-                <div class="input-group">
-                  <input type="number" id="predictionUserId" placeholder="Enter User ID" />
-                  <input type="number" id="predictionMovieId" placeholder="Enter movie ID" />
-                </div>
-                <button type="submit">
-                  <i class="fas fa-star"></i> Get Rating Prediction
-                </button>
-              </form>
-              <div id="predictionLoading" class="loading">
-                <i class="fas fa-spinner"></i>
-              </div>
-              <div id="predictionResult" class="results"></div>
-            </div>
 
-            <div class="section">
-              <h2><i class="fas fa-star"></i> Prediction With KNN</h2>
-              <form onsubmit="getPredictionKNN(); return false;">
-                <div class="input-group">
-                  <input type="number" id="predictionUserIdKNN" placeholder="Enter User ID" />
-                  <input type="number" id="predictionMovieIdKNN" placeholder="Enter movie ID" />
-                </div>
-                <button type="submit">
-                  <i class="fas fa-star"></i> Get Rating Prediction
-                </button>
-              </form>
-              <div id="predictionLoadingKNN" class="loading">
-                <i class="fas fa-spinner"></i>
-              </div>
-              <div id="predictionResultKNN" class="results"></div>
+          <div class="section">
+            <h2><i class="fas fa-magnifying-glass-chart"></i> Recommendations With MAB and epsilon decay (Exponential)
+            </h2>
+            <div class="input-group">
+              <input type="number" id="SGDMabId" placeholder="Enter User ID" />
             </div>
+            <button onclick="getSGDRecommandationMabExp()">
+              <i class="fas fa-lightbulb"></i> Get Recommendations
+            </button>
+            <div id="SGDMabLoading" class="loading">
+              <i class="fas fa-spinner"></i>
+            </div>
+            <div id="SGDMabMovieResults" class="results"></div>
           </div>
-        </div>
-
-        <div class="footer">
-          <p>
-            &copy; 2025 Movie Recommender System | All Rights Reserved | Made by
-            Fabrizio and Giuseppe
-          </p>
         </div>
       </div>
+
+      <!-- Prediction Section -->
+      <div class="category-container">
+        <h2 class="category-title">
+          <i class="fas fa-star"></i> Get Prediction
+        </h2>
+        <div class="sections-container">
+          <div class="section">
+            <h2><i class="fas fa-star"></i> Prediction With KNN</h2>
+            <form onsubmit="getPredictionKNN(); return false;">
+              <div class="input-group">
+                <input type="number" id="predictionUserIdKNN" placeholder="Enter User ID" />
+                <input type="number" id="predictionMovieIdKNN" placeholder="Enter movie ID" />
+              </div>
+              <button type="submit">
+                <i class="fas fa-star"></i> Get Rating Prediction
+              </button>
+            </form>
+            <div id="predictionLoadingKNN" class="loading">
+              <i class="fas fa-spinner"></i>
+            </div>
+            <div id="predictionResultKNN" class="results"></div>
+          </div>
+
+          <div class="section">
+            <h2><i class="fas fa-star"></i> Prediction With SGD</h2>
+            <form onsubmit="getPrediction(); return false;">
+              <div class="input-group">
+                <input type="number" id="predictionUserId" placeholder="Enter User ID" />
+                <input type="number" id="predictionMovieId" placeholder="Enter movie ID" />
+              </div>
+              <button type="submit">
+                <i class="fas fa-star"></i> Get Rating Prediction
+              </button>
+            </form>
+            <div id="predictionLoading" class="loading">
+              <i class="fas fa-spinner"></i>
+            </div>
+            <div id="predictionResult" class="results"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>
+          &copy; 2025 Movie Recommender System | Made by
+          Fabrizio and Giuseppe
+        </p>
+      </div>
+    </div>
 </body>
 
 </html>
