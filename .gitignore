@@ -3,10 +3,10 @@ models/
 results/
 active.bat
 pyproject.toml
-old_res.txt
-temp_res.txt
 __pycache__/
 pycache/
 *.pyc
 *.pyo
 *.pyd
+results_pr/
+mf_pr_results/
