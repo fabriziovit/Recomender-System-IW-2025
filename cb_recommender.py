@@ -1,9 +1,12 @@
+import logging
 import numpy as np
 import pandas as pd
 from gensim.models import Word2Vec
 from gensim.utils import simple_preprocess
 from gensim.parsing.preprocessing import STOPWORDS
 from sklearn.metrics.pairwise import cosine_similarity
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 class ContentBasedRecommender:
@@ -27,7 +30,7 @@ class ContentBasedRecommender:
 
         self._preprocess_all(vector_size=vector_size, window=window, min_count=min_count)
 
-        print(f"Vocabolario Word2Vec creato con {len(self.model.wv.index_to_key)} parole uniche.")
+        logging.info(f"Vocabolario Word2Vec creato con {len(self.model.wv.index_to_key)} parole uniche.")
 
     def _preprocess_text(self) -> None:
         """Preprocessa il testo degli abstract utilizzando Gensim.
@@ -51,7 +54,7 @@ class ContentBasedRecommender:
             else:
                 doc_vector = np.zeros(self.model.vector_size)
             embeddings.append(doc_vector)
-        print("End of _calculate_embeddings")
+        logging.info("End of _calculate_embeddings")
         self.embeddings = np.array(embeddings)
 
     def _parse_genres(self) -> None:
@@ -148,11 +151,11 @@ class ContentBasedRecommender:
         for i in temp_sim_scores:
             if i[0] != movie_idx:
                 sim_scores += [i]
-        # print(f"sim_scores: {[ (self.df.iloc[values[0]]['movieId'], values[1]) for values in sim_scores]}")
+        logging.info(f"sim_scores: {[ (self.df.iloc[values[0]]['movieId'], values[1]) for values in sim_scores]}")
 
         # Estrai gli indici dei film raccomandati
         rec_indices = [i[0] for i in sim_scores]
-        # print("movieId dei film consigliati: ", self.df.iloc[rec_indices]["movieId"].tolist()) # Stampa gli movieId per debugging/verifica
+        logging.info("movieId dei film consigliati: ", self.df.iloc[rec_indices]["movieId"].tolist())  # Stampa gli movieId per debugging/verifica
 
         # Restituisce il dataframe ordinato per scores dei film raccomandati
         return self.df.iloc[rec_indices]

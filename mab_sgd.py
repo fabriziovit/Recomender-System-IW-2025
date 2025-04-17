@@ -1,24 +1,27 @@
+import logging
 import numpy as np
 import pandas as pd
+from utils import min_max_normalize
 from epsilon_mab import EpsGreedyMAB
 from mf_sgd import MF_SGD_User_Based
-from utils import min_max_normalize
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 def _print_info_rounds(i: int, curr_arm: int, curr_movie_id: int, curr_movie_title: str, reward: float) -> None:
-    print(f"Round {i}:")
-    print(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
-    print(f"  - Reward: {reward:.3f}\n")
+    logging.info(f"Round {i}:")
+    logging.info(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
+    logging.info(f"  - Reward: {reward:.3f}\n")
 
 
 def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame) -> None:
-    print("\nStatistiche finali del bandit:")
+    logging.info("\nStatistiche finali del bandit:")
     top_n_arms = bandit_mab.get_top_n()  # Restituisce i top N bracci con i relativi Q-values ordinati
     for i, (curr_arm, q_value) in enumerate(top_n_arms):
         curr_movie_id = df_recommendations.iloc[curr_arm]["movieId"]
         curr_movie_title = df_recommendations.iloc[curr_arm]["title"]
 
-        print(
+        logging.info(
             f"  - Arm {curr_arm}: (Movie ID {curr_movie_id}, '{curr_movie_title}') "
             f"con Q = {bandit_mab.get_qvalues()[curr_arm]:.2f}, reward_tot = {bandit_mab.get_total_rewards_list()[curr_arm]:.2f}"
             f" e selezionato {bandit_mab.get_clicks_for_arm()[curr_arm]} volte"
@@ -26,7 +29,7 @@ def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFram
 
 
 def _get_topk_movies(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame) -> None:
-    print("\nTop film raccomandati:")
+    logging.info("\nTop film raccomandati:")
     top_n_arms = bandit_mab.get_top_n()
     topk = []
     for i, (curr_selected_arm, q_value) in enumerate(top_n_arms):
@@ -87,7 +90,7 @@ def mab_on_sgd(df_ratings: pd.DataFrame, df_movies: pd.DataFrame, user_id: int, 
 
     # Resetta l'indice per renderlo compatibile con il bandit
     df_recommendations.reset_index(drop=False, inplace=True)
-    print(f"Reccomendations:\n {df_recommendations}")
+    logging.info(f"Reccomendations:\n {df_recommendations}")
 
     # Istanziazione del bandit Epislon-Greedy MAB
     bandit_mab = EpsGreedyMAB(n_arms=N, epsilon=0.1, Q0=0.0)

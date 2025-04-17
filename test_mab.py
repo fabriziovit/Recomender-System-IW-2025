@@ -1,29 +1,32 @@
+import logging
 import numpy as np
 import pandas as pd
-from utils import exp_epsilon_decay, linear_epsilon_decay, log_epsilon_decay
-from epsilon_mab import EpsGreedyMAB
 from mf_sgd import MF_SGD_User_Based
+from epsilon_mab import EpsGreedyMAB
 from utils import load_movielens_data
+from utils import exp_epsilon_decay, linear_epsilon_decay, log_epsilon_decay
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 def _print_final_stats(df_merged: pd.DataFrame, bandit_mab: EpsGreedyMAB) -> None:
-    print("\nStatistiche finali del bandit:")
+    logging.info("\nStatistiche finali del bandit:")
     top_n_arms = bandit_mab.get_top_n()[0:20]  #! Restituisce i top N bracci con i relativi Q-values ordinati
     for i, (curr_arm, _) in enumerate(top_n_arms):
         curr_movie_id = df_merged.iloc[curr_arm]["movieId"]
         curr_movie_title = df_merged.iloc[curr_arm]["title"]
 
-        print(
+        logging.info(
             f"  - Arm {curr_arm}: (Movie ID {curr_movie_id}, '{curr_movie_title}') "
             f"con Q = {bandit_mab.get_qvalues()[curr_arm]:.2f}, reward_tot = {bandit_mab.get_total_rewards_list()[curr_arm]:.2f}"
             f" e selezionato {bandit_mab.get_clicks_for_arm()[curr_arm]} volte"
         )
-    print(f"num_exploration: {bandit_mab._nexploration}")
-    print(f"num_exploitation: {bandit_mab._nexploitation}")
+    logging.info(f"num_exploration: {bandit_mab._nexploration}")
+    logging.info(f"num_exploitation: {bandit_mab._nexploitation}")
 
 
 def _get_top_movies(bandit_mab: EpsGreedyMAB, df_merged: pd.DataFrame) -> list:
-    print("\nTop film raccomandati:")
+    logging.info("\nTop film raccomandati:")
     top_n_arms = bandit_mab.get_top_n()
     topk = []
     for i, (curr_selected_arm, _) in enumerate(top_n_arms):
@@ -32,7 +35,7 @@ def _get_top_movies(bandit_mab: EpsGreedyMAB, df_merged: pd.DataFrame) -> list:
     return topk
 
 
-def _start_rounds(df_expected: pd.DataFrame, bandit_mab: EpsGreedyMAB, num_rounds: int, decay: bool= True) -> None:
+def _start_rounds(df_expected: pd.DataFrame, bandit_mab: EpsGreedyMAB, num_rounds: int, decay: bool = True) -> None:
 
     for i in range(0, num_rounds):
 
@@ -42,18 +45,18 @@ def _start_rounds(df_expected: pd.DataFrame, bandit_mab: EpsGreedyMAB, num_round
         # Recupero informazioni sul film selezionato
         curr_movie_id: int = df_expected.iloc[curr_arm]["movieId"]
         curr_movie_title: str = df_expected.iloc[curr_arm]["title"]
-        print(f"\ncurr_selected_arm: {curr_arm}")
-        print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
+        logging.info(f"\ncurr_selected_arm: {curr_arm}")
+        logging.info(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
 
         # La reward corrisponde alla predizione del film selezionato
         reward = df_expected.iloc[curr_arm]["values"]
 
-        '''
-        print(f"Round {i}:")
-        print(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
-        print(f"  - Reward: {reward:.3f}, epsilon: {bandit_mab.get_curr_epsilon():.3f}")
-        print(f"  - function: {bandit_mab._epsilon_decay_function.__name__}")
-        '''
+        """
+        logging.info(f"Round {i}:")
+        logging.info(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
+        logging.info(f"  - Reward: {reward:.3f}, epsilon: {bandit_mab.get_curr_epsilon():.3f}")
+        logging.info(f"  - function: {bandit_mab._epsilon_decay_function.__name__}")
+        """
 
         if decay:
             # Aggiorna epsilon ad ogni round
@@ -63,7 +66,7 @@ def _start_rounds(df_expected: pd.DataFrame, bandit_mab: EpsGreedyMAB, num_round
         bandit_mab.update(curr_arm, reward)
 
 
-def mab(df_expected: pd.DataFrame, bandit_mab: EpsGreedyMAB, num_rounds: int = 10_000, decay:bool = True) -> list:
+def mab(df_expected: pd.DataFrame, bandit_mab: EpsGreedyMAB, num_rounds: int = 10_000, decay: bool = True) -> list:
 
     # Simulazione del gioco
     _start_rounds(df_expected, bandit_mab, num_rounds, decay)
@@ -100,7 +103,7 @@ def test_single_user(
 
     # Salvo i risultati in una lista
     res_user: tuple = (bandit_mab._nexploration, bandit_mab._nexploitation, bandit_mab._total_rewards.sum())
-    print(f"Results for user {user_id}: {res_user}")
+    logging.info(f"Results for user {user_id}: {res_user}")
 
     return res_user
 
@@ -114,7 +117,7 @@ def test_dacys_all_users(df_movies: pd.DataFrame, df_ratings: pd.DataFrame, df_t
     recomm: MF_SGD_User_Based = MF_SGD_User_Based.load_model(model_path)
 
     for fun in [linear_epsilon_decay]:
-        print(f"Funzione di decay epsilon: {fun.__name__}")
+        logging.info(f"Funzione di decay epsilon: {fun.__name__}")
 
         dizionario = {"exploration": 0, "exploitation": 0, "comulative_reward": 0.0}
         for user_id in utility_matrix.index:

@@ -149,5 +149,4 @@ class EpsGreedyMAB(MAB):
             raise TypeError("epsilon must be float")
         # Assicura che epsilon sia tra 0 e 1 (Clamping)
         new_epsilon = max(0.0, min(1.0, new_epsilon))
-        print(f"epsilon: {new_epsilon}")
         self._curr_epsilon = new_epsilon

@@ -1,20 +1,22 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import pandas as pd
-import numpy as np
 import os
+import logging
+import numpy as np
+import pandas as pd
+from test_mab import mab
+from flask_cors import CORS
+from fuzzywuzzy import process
+from epsilon_mab import EpsGreedyMAB
+from mf_sgd import MF_SGD_User_Based
+from mab_cf import mab_on_collabfilter
+from mab_cb import mab_on_contentbased
+from flask import Flask, request, jsonify
+from sklearn.neighbors import NearestNeighbors
 from cb_recommender import ContentBasedRecommender
 from cf_recommender import CollaborativeRecommender
-from mf_sgd import MF_SGD_User_Based
-from sklearn.neighbors import NearestNeighbors
-from mab_cb import mab_on_contentbased
-from mab_cf import mab_on_collabfilter
-from mab_sgd import mab_on_sgd
-from utils import load_movielens_data, pearson_distance, compute_user_similarity_matrix, log_epsilon_decay, exp_epsilon_decay, linear_epsilon_decay
+from utils import load_movielens_data, log_epsilon_decay, exp_epsilon_decay, linear_epsilon_decay
 from director_recommender import recommend_by_movie_id, recommend_films_with_actors
-from test_mab import mab
-from epsilon_mab import EpsGreedyMAB
-from fuzzywuzzy import process
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 app = Flask(__name__)
 CORS(app)
@@ -30,7 +32,6 @@ class MovieRecommenderApp:
         self.content_recommender = None
         self.collaborative_recommender = None
         self.utility_matrix = None
-        self.similarity_matrix = None
         self.sgd_model: MF_SGD_User_Based = None
         self.content_initialized = False
         self.collaborative_initialized = False
@@ -45,7 +46,7 @@ class MovieRecommenderApp:
             self.utility_matrix = self.df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
             self.df_with_abstracts = pd.read_csv(self.movies_with_abstracts_path, dtype={"imdbId": str, "tmdbId": str})
         except Exception as e:
-            print(f"Errore nel caricamento dei dati base: {e}")
+            logging.info(f"Errore nel caricamento dei dati base: {e}")
 
     def movie_finder(self, title):
         all_titles = self.df_with_abstracts["title"].tolist()
@@ -59,22 +60,20 @@ class MovieRecommenderApp:
             self.content_recommender = ContentBasedRecommender(self.df_with_abstracts)
             self.content_initialized = True
         except Exception as e:
-            print(f"Errore nell'inizializzazione del content recommender: {e}")
+            logging.info(f"Errore nell'inizializzazione del content recommender: {e}")
 
     def initialize_collaborative_recommender(self, n_neighbors: int = 20) -> None:
         if self.collaborative_initialized:
             return
         try:
-            self.similarity_matrix = compute_user_similarity_matrix(self.utility_matrix)
-            knn_model_item = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=n_neighbors + 1, n_jobs=-1)
-            knn_model_user = NearestNeighbors(metric=pearson_distance, algorithm="brute", n_neighbors=n_neighbors + 1, n_jobs=-1)
-            self.collaborative_recommender = CollaborativeRecommender(knn_model_item, knn_model_user, self.similarity_matrix, self.utility_matrix)
+            knn_model_item = NearestNeighbors(metric="cosine", algorithm="brute", n_neighbors=n_neighbors + 1, n_jobs=-1)
+            knn_model_user = NearestNeighbors(metric="cosine", algorithm="brute", n_neighbors=n_neighbors + 1, n_jobs=-1)
+            self.collaborative_recommender = CollaborativeRecommender(knn_model_item, knn_model_user)
             self.collaborative_recommender.fit_item_model(self.utility_matrix)
             self.collaborative_recommender.fit_user_model(self.utility_matrix)
             self.collaborative_initialized = True
-            print(f"self.similarity_matrix:\n {self.similarity_matrix.shape}")
         except Exception as e:
-            print(f"Errore nell'inizializzazione del collaborative recommender: {e}")
+            logging.info(f"Errore nell'inizializzazione del collaborative recommender: {e}")
 
     def initialize_sgd_recommender(self) -> None:
         self.sgd_model = MF_SGD_User_Based.load_model("models/mf_model_n200_lr0.001_lambda0.0001_norm.pkl")
@@ -146,7 +145,7 @@ class MovieRecommenderApp:
             self.initialize_collaborative_recommender()
             if not self.collaborative_initialized:
                 return pd.DataFrame()
-        return self.collaborative_recommender.get_user_recommendations(user_id, self.utility_matrix, self.df_movies).head(top_n)
+        return self.collaborative_recommender.get_user_recommendations(user_id, self.df_movies).head(top_n)
 
     def run_collaborative_user_recommender_mab(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.collaborative_initialized:
@@ -170,7 +169,7 @@ class MovieRecommenderApp:
             self.initialize_sgd_recommender()
             if not self.sgd_initialized:
                 return pd.DataFrame()
-        return self.sgd_model.get_recommendations(matrix=self.utility_matrix, user_id=user_id).head(top_n)
+        return self.sgd_model.get_recommendations(self.utility_matrix, user_id=user_id).head(top_n)
 
     def run_mab_sgd_model_log_epsilon_decay(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.sgd_initialized:
@@ -255,7 +254,7 @@ class MovieRecommenderApp:
             self.initialize_collaborative_recommender()
             if not self.collaborative_initialized:
                 return 0.0
-        return self.collaborative_recommender.get_prediction(user_id, movie_id)
+        return self.collaborative_recommender.get_prediction_value_clipped(user_id, movie_id)
 
 
 app_instance = MovieRecommenderApp()
@@ -445,6 +444,8 @@ def user_recommendations():
     df_results = df_results.drop(columns=["values"])
     json_response = {"userId": user_id, "results": df_results.to_dict(orient="records")}
 
+    logging.info(f"json_response: {json_response}")
+
     return jsonify(json_response)
 
 
@@ -584,7 +585,7 @@ def mab_sgd_fixed_epsilon_recommendations():
         return jsonify({"error": True, "message": f"User with ID {user_id} not found."}), 404
 
     results_ids = app_instance.run_mab_fixed_epsilon(user_id, top_n, epsilon)
-    print(f"results_ids: {results_ids}")
+    logging.info(f"results_ids: {results_ids}")
 
     ordered_results = []
 
@@ -631,7 +632,8 @@ def predict():
     else:
         movie["already_rated"] = False
         df_recoomendations = app_instance.run_sgd_predictions(user_id, app_instance.utility_matrix)
-        movie["prediction_rating"] = df_recoomendations.loc[movie_id].values[0]
+
+        movie["prediction_rating"] = np.clip(df_recoomendations.loc[movie_id].values[0], 0.5, 5.0)
 
     movie = movie.to_dict(orient="records")
     json_response = {

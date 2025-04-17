@@ -283,6 +283,7 @@ async function getItemRecommendationsWithMab() {
 }
 
 async function getUserRecommendations() {
+
   const userId = document.getElementById('userId').value;
   if (!userId) {
     displayError('userResults', 'Please enter a user ID');
@@ -296,8 +297,9 @@ async function getUserRecommendations() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: parseInt(userId) }),
     });
-    const data = await response.json();
 
+    const data = await response.json();
+    
     if (!response.ok || data.error) {
       displayError(
         'userResults',

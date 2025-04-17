@@ -1,9 +1,8 @@
+import logging
 import numpy as np
 import pandas as pd
 from typing import Union
-from scipy.stats import pearsonr
 from sklearn.model_selection import train_test_split
-from sklearn.metrics.pairwise import pairwise_distances
 
 
 def load_movielens_data(path: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -11,24 +10,6 @@ def load_movielens_data(path: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataF
     df_ratings = pd.read_csv(path + "ratings.csv", on_bad_lines="warn")
     df_tags = pd.read_csv(path + "tags.csv", on_bad_lines="warn")
     return df_movies, df_ratings, df_tags
-
-
-def pearson_similarity(x, y):
-    return pearsonr(x, y)[0]
-
-
-def pearson_distance(x, y):
-    """Distanza di Pearson (1 - correlazione) normalizzata tra 0 e 1"""
-    return 1 - pearson_similarity(x, y)  # Restituisci la distanza, che è 1 - correlazione
-
-
-def compute_user_similarity_matrix(matrix) -> pd.DataFrame:
-    """Calcola la matrice di similarità utente-utente usando pairwise_distances."""
-    # pairwise_distances è 1 - pearson_correlation
-    # Quindi 1 - (1 - pearson_correlation) = pearson_correlation
-    similarity_matrix = 1 - pairwise_distances(matrix, metric="correlation", n_jobs=-1)
-    similarity_df = pd.DataFrame(similarity_matrix, index=matrix.index, columns=matrix.index)
-    return similarity_df
 
 
 def _hold_out_random_train_valid_test(
@@ -41,12 +22,12 @@ def _hold_out_random_train_valid_test(
     # Split in training e test dataframe
     train_ratings_df, test_ratings_df = train_test_split(df_ratings, test_size=valid_size + test_size, random_state=42)
     if not ret_valid:
-        print(f"# Train Rows: {len(train_ratings_df)}, Test Rows: {len(test_ratings_df)}")
+        logging.info(f"# Train Rows: {len(train_ratings_df)}, Test Rows: {len(test_ratings_df)}")
         return train_ratings_df, test_ratings_df
     else:
         # Split il training in training effettivo e validation
         valid_ratings_df, test_ratings_df = train_test_split(test_ratings_df, test_size=test_size, random_state=42)
-        print(f"# Train Rows: {len(train_ratings_df)}, Valid Rows: {len(valid_ratings_df)}, Test Rows: {len(test_ratings_df)}")
+        logging.info(f"# Train Rows: {len(train_ratings_df)}, Valid Rows: {len(valid_ratings_df)}, Test Rows: {len(test_ratings_df)}")
     return train_ratings_df, valid_ratings_df, test_ratings_df
 
 
@@ -82,11 +63,11 @@ def get_train_valid_test_matrix(
     test_matrix = _get_reindexd_matrix(test_matrix, all_movies_id, all_user_ids)
 
     if not ret_valid:
-        print(f"# Train-matrix: {train_matrix.shape}, Test-matrix: {test_matrix.shape}")
+        logging.info(f"# Train-matrix: {train_matrix.shape}, Test-matrix: {test_matrix.shape}")
         return train_matrix, test_matrix
     else:
         valid_matrix = _get_reindexd_matrix(valid_matrix, all_movies_id, all_user_ids)
-        print(f"# Train-matrix: {train_matrix.shape}, Valid-matrix: {valid_matrix.shape}, Test-matrix: {test_matrix.shape}")
+        logging.info(f"# Train-matrix: {train_matrix.shape}, Valid-matrix: {valid_matrix.shape}, Test-matrix: {test_matrix.shape}")
         return train_matrix, valid_matrix, test_matrix
 
 

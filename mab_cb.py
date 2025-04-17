@@ -1,25 +1,28 @@
+import logging
 import numpy as np
 import pandas as pd
-from cb_recommender import ContentBasedRecommender
-from epsilon_mab import EpsGreedyMAB
 from utils import min_max_normalize
+from epsilon_mab import EpsGreedyMAB
+from cb_recommender import ContentBasedRecommender
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 def _print_info_rounds(i: int, curr_arm: int, curr_idx: int, curr_movie_id: int, curr_movie_title: str, curr_sim: float, curr_mean: float, reward: float) -> None:
-    print(f"Round {i}:")
-    print(f"  - Braccio selezionato: {curr_arm} -> Index: {curr_idx}, MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
-    print(f"  - Similarità: {curr_sim:.3f}, Mean Normalizzata: {curr_mean:.3f}, Hybrid reward: {reward:.3f}")
-    print()
+    logging.info(f"Round {i}:")
+    logging.info(f"  - Braccio selezionato: {curr_arm} -> Index: {curr_idx}, MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
+    logging.info(f"  - Similarità: {curr_sim:.3f}, Mean Normalizzata: {curr_mean:.3f}, Hybrid reward: {reward:.3f}")
+    logging.info()
 
 
 def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame, indexes_of_embedd: pd.Index) -> None:
-    print("\nStatistiche finali del bandit:")
+    logging.info("\nStatistiche finali del bandit:")
     top_n_arms = bandit_mab.get_top_n()  # Restituisce i top N bracci con i relativi Q-values ordinati
     for i, (curr_arm, q_value) in enumerate(top_n_arms):
         curr_idx_embedd = indexes_of_embedd[curr_arm]
         curr_movie_id = df_recommendations.loc[curr_idx_embedd]["movieId"]
         curr_movie_title: str = df_recommendations.loc[curr_idx_embedd]["title"]
-        print(
+        logging.info(
             f"  - Arm {curr_arm}: (Movie ID {curr_movie_id}, '{curr_movie_title}') "
             f"con Q = {bandit_mab.get_qvalues()[curr_arm]:.2f}, reward_tot = {bandit_mab.get_total_rewards_list()[curr_arm]:.2f}"
             f" e selezionato {bandit_mab.get_clicks_for_arm()[curr_arm]} volte"
@@ -27,7 +30,7 @@ def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFram
 
 
 def _get_topk_movies(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame, indexes_of_embedd: pd.Index) -> None:
-    print("\nTop film raccomandati:")
+    logging.info("\nTop film raccomandati:")
     top_n_arms = bandit_mab.get_top_n()
     topk = []
     for i, (curr_selected_arm, q_value) in enumerate(top_n_arms):
@@ -65,8 +68,8 @@ def _start_rounds(
         curr_movie_id: int = df_recommendations.loc[curr_idx_embedd]["movieId"]
         curr_movie_title: str = df_recommendations.loc[curr_idx_embedd]["title"]
 
-        print(f"\ncurr_selected_arm: {curr_selected_arm}")
-        print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
+        logging.info(f"\ncurr_selected_arm: {curr_selected_arm}")
+        logging.info(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
 
         # Ottieni il punteggio di similarità per il film selezionato (dal vettore sim_scores)
         curr_similarity: float = sim_scores[curr_selected_arm]
@@ -93,7 +96,7 @@ def mab_on_contentbased(movie_title: str, df_ratings: pd.DataFrame, num_rounds: 
     # Otteniamo il DataFrame dei film raccomandati
     df_recommendations: pd.DataFrame = recommender.recommend(movie_title, N)[["movieId", "title"]]
     indexes_of_embedd: pd.Index = df_recommendations.index
-    print(f"Reccomendations:\n {df_recommendations}")
+    logging.info(f"Reccomendations:\n {df_recommendations}")
 
     # Calcola i punteggi di similarità tra il film e quelli raccomandati
     sim_scores_items: np.ndarray = recommender.compute_similarity_scores(curr_idx_embedd)

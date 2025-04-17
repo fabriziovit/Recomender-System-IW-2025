@@ -1,16 +1,13 @@
 import os
+import time
 import pickle
 import logging
-import datetime
 import numpy as np
 import pandas as pd
-from eval import eval_mae_rmse
-from utils import load_movielens_data, get_train_valid_test_matrix
+from collections import defaultdict
+from sklearn.metrics import mean_absolute_error, root_mean_squared_error
 
-# pd.set_option("display.max_rows", None)  # Non limitare il numero di righe
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-
-# ************************************************************************************************************** #
 
 
 class MF_SGD_User_Based:
@@ -51,8 +48,6 @@ class MF_SGD_User_Based:
 
         self.train_mean: float = None  # Media globale on training set
 
-        self._predictions_train: dict = None  # Predizioni per tutti gli utenti
-
     def _get_samples(self, matrix) -> list[tuple]:
         """Restituire una lista di samples (user_index, item_index, rating) da una matrice."""
         logging.info("Creazione samples...")
@@ -67,10 +62,6 @@ class MF_SGD_User_Based:
             item_id_idx = self.item_ids_map.get(index[1])  # Get item_index from item_id (using map)
             samples.append((user_id_idx, item_id_idx, rating))  # Append sample
         return samples
-
-    def _normalize_matrix(self, matrix) -> pd.DataFrame:
-        """Normalizza sottraendo la media globale."""
-        return matrix - self.train_mean
 
     def _get_mse_loss_regularized(self, samples) -> float:
         """Calcola la funzione di perdita (MSE con regolarizzazione L2) inclusi i bias e la media globale."""
@@ -97,7 +88,7 @@ class MF_SGD_User_Based:
         return self.train_mean + self.user_biases[user_index] + self.item_biases[item_index] + np.dot(self.X_user_factors[user_index], self.Y_item_factors[item_index])
 
     def _get_predictions(self, user_id: int, matrix: pd.DataFrame, exclude: bool = True) -> pd.DataFrame:
-        """Raccomanda film per un utente dato, basato sul modello Matrix Factorization SGD."""
+        """Restituisce le predizioni per un utente specifico."""
         if user_id not in self.user_ids_map:
             raise ValueError(f"User ID {user_id} non trovato nel training set.")
         predicted_ratings_list = []
@@ -113,13 +104,6 @@ class MF_SGD_User_Based:
         predictions_df = pd.DataFrame(predicted_ratings_list).set_index("movieId")
         predictions_df.columns = ["values"]
         return predictions_df.sort_values(by="values", ascending=False)
-
-    def _compute_predictions_on_train(self) -> dict:
-        """Calcola le predizioni sul training set"""
-        all_user_predictions_evaluation = {}
-        for user_id in self._train_matrix.index:
-            all_user_predictions_evaluation[user_id] = self._get_predictions(user_id, self._train_matrix, exclude=True)
-        return all_user_predictions_evaluation
 
     def _stochastic_gradient_descent(self, num_factors: int, learning_rate: float, lambda_term: float, refit: bool = False, evaluation_output: list = None) -> None:
         if not self._is_fitted or refit:
@@ -195,9 +179,7 @@ class MF_SGD_User_Based:
                         self.Y_item_factors = best_item_factors
                         self.user_biases = best_user_biases
                         self.item_biases = best_item_biases
-                        self._is_fitted = True
                         return
-            self._is_fitted = True
 
     def fit(self, refit: bool = False, evaluation_output: list = None) -> None:
 
@@ -211,7 +193,7 @@ class MF_SGD_User_Based:
         # Get Simples for train and test
         self._train_samples = self._get_samples(self._train_matrix)
         self._valid_samples = self._get_samples(self._valid_matrix)
-        print(f"train_simples: {len(self._train_samples)}, valid_simples: {len(self._valid_samples)}")
+        logging.info(f"train_simples: {len(self._train_samples)}, valid_simples: {len(self._valid_samples)}")
 
         # Inizializzazione dei fattori latenti e dei bias
         self.X_user_factors = np.random.normal(0, 0.01, (len(user_ids), self.num_factors))
@@ -221,23 +203,17 @@ class MF_SGD_User_Based:
 
         # Calcolo della media globale sul training set per la normalizzazione
         self.train_mean = self._train_matrix[self._train_matrix > 0.0].stack().mean()
-        print(f"Media globale sul training set: {self.train_mean:.10f}")
-
-        # Normalizzazione della matrice di training, validazione e test
-        self._train_matrix = self._normalize_matrix(self._train_matrix)
-        self._valid_matrix = self._normalize_matrix(self._valid_matrix)
-        print("Matrici normalizzate con successo.")
+        logging.info(f"Media globale sul training set: {self.train_mean:.10f}")
 
         # Addestramento del modello
         self._stochastic_gradient_descent(self.num_factors, self.learning_rate, self.lambda_reg, refit, evaluation_output)
+        self._is_fitted = True
 
-        # Calcolo delle predizioni per tutti gli utenti
-        self._predictions_train = self._compute_predictions_on_train()
-        print("Predizioni per tutti gli utenti calcolate con successo.")
-
-    def get_recommendations(self, matrix: pd.DataFrame, user_id: pd.Index, exclude: bool = True) -> pd.DataFrame:
+    def get_recommendations(self, utility_matrix: pd.DataFrame, user_id: pd.Index) -> pd.DataFrame:
         """Restituisce le predizioni per l'utente specificato."""
-        return self._get_predictions(user_id, matrix, exclude=exclude)
+        # Exclude i film già visti dall'utente
+        recomm_df = self._get_predictions(user_id, utility_matrix, exclude=True)
+        return recomm_df
 
     @classmethod
     def load_model(cls, filepath):
@@ -256,28 +232,188 @@ class MF_SGD_User_Based:
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, "wb") as f:
             pickle.dump(self, f)
-        print(f"Modello salvato con successo in: {filepath}")
+        logging.info(f"Modello salvato con successo in: {filepath}")
 
+    # **************************************************************************** #
 
-def test():
-    # 1. Carica il dataset MovieLens
-    df_movies, df_ratings, df_tags = load_movielens_data("dataset/")
+    def evaluate_mea_rmse(self, test_matrix: pd.DataFrame, min_rating: float = 0.5, max_rating: float = 5.0):
+        """Valuta il modello sul test set calcolando MAE e RMSE."""
+        if not self._is_fitted:
+            raise RuntimeError("Il modello MF deve essere addestrato prima della valutazione. Chiamare fit().")
 
-    # 2. Crea la utility matrix
-    utility_matrix = df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
+        logging.info("Inizio valutazione MAE/RMSE...")
 
-    user_ids_to_test = [100, 604]
+        true_ratings = []
+        predicted_ratings = []
+        skipped_count = 0
+        processed_count = 0
+        start_time = time.time()
 
-    model_path1 = "./models/mf_model_n70_lr0.001_lambda1e-05_norm.pkl"
-    recomm1: MF_SGD_User_Based = MF_SGD_User_Based.load_model(model_path1)
+        # Iterazione Efficiente sul Test Set usando stack()
+        test_ratings_series = test_matrix[test_matrix > 0].stack()
+        total_ratings_to_predict = len(test_ratings_series)
 
-    model_path2 = "./models/mf_model_n140_lr0.001_lambda1e-05_norm.pkl"
-    recomm2: MF_SGD_User_Based = MF_SGD_User_Based.load_model(model_path2)
+        if total_ratings_to_predict == 0:
+            logging.warning("Nessun rating > 0 trovato nel test_matrix fornito per la valutazione.")
+            return np.nan, np.nan
 
-    for user_id in user_ids_to_test:
-        print(f"\n\nUser ID: {user_id}")
-        print(recomm2.get_recommendations(utility_matrix, user_id).head(5).merge(df_movies, on="movieId")[["title", "values"]])
+        logging.info(f"Valutazione su {total_ratings_to_predict} rating nel test set...")
 
+        # Iteriamo sulla Series risultante (indice multi-livello user_id, movie_id)
+        for idx, true_rating in test_ratings_series.items():
+            user_id, movie_id = idx  # Estrai userId e movieId dall'indice
 
-if __name__ == "__main__":
-    test()
+            processed_count += 1
+
+            # Ottieni gli indici interni corrispondenti agli ID
+            user_idx = self.user_ids_map.get(user_id)
+            item_idx = self.item_ids_map.get(movie_id)
+
+            # Salta se l'utente o l'item non erano presenti nel training set
+            # Il modello non può fare predizioni per dati mai visti durante il training
+            if user_idx is None or item_idx is None:
+                skipped_count += 1
+                continue
+
+            # Calcola la predizione usando gli indici interni
+            try:
+                predicted_rating_raw = self._predict_rating(user_idx, item_idx)
+
+                # Applica il clipping per riportare la predizione nel range valido
+                predicted_rating_clipped = np.clip(predicted_rating_raw, min_rating, max_rating)
+
+                # Aggiungi i valori alle liste
+                true_ratings.append(true_rating)
+                predicted_ratings.append(predicted_rating_clipped)
+
+            except IndexError:
+                # Questo potrebbe accadere se le mappe o i fattori non sono coerenti
+                logging.error(f"Indice fuori dai limiti per ({user_id},{movie_id}) -> ({user_idx},{item_idx}). Skipping.")
+                skipped_count += 1
+                continue
+            except Exception as e:
+                logging.error(f"Errore generico durante la predizione per ({user_id},{movie_id}): {e}")
+                skipped_count += 1
+                continue
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+
+        logging.info(f"Valutazione MAE/RMSE completata in {elapsed_time:.2f} secondi.")
+        if skipped_count > 0:
+            logging.info(f"  Skipped {skipped_count} rating (user/item non nel training o errore).")
+
+        # Calcola MAE e RMSE se ci sono state predizioni valide
+        if not true_ratings:
+            logging.warning("Nessuna predizione valida generata per il calcolo di MAE/RMSE.")
+            return np.nan, np.nan
+        else:
+            mae = mean_absolute_error(true_ratings, predicted_ratings)
+            rmse = root_mean_squared_error(true_ratings, predicted_ratings)  # squared=False per RMSE
+            logging.info(f"  MAE:  {mae:.10f}")
+            logging.info(f"  RMSE: {rmse:.10f}")
+            return mae, rmse
+
+    # **************************************************************************** #
+
+    def evaluate_precision_recall(self, test_matrix: pd.DataFrame, K_list: list[int], relevant_threshold: float):
+        """Valuta il modello sul test set calcolando Precision@K e Recall@K."""
+
+        if not self._is_fitted:
+            raise RuntimeError("Il modello MF deve essere addestrato prima della valutazione P/R. Chiamare fit().")
+
+        # Dizionari per accumulare somme e conteggi
+        precision_sum = defaultdict(float)
+        recall_sum = defaultdict(float)
+        evaluated_user_count = defaultdict(int)  # Contatore utenti validi per ogni K
+        max_K = max(K_list) if K_list else 0
+        processed_users = 0
+        start_time = time.time()
+
+        if max_K == 0:
+            logging.warning("K_list è vuota. Nessuna metrica P/R calcolata.")
+            return {}
+
+        # Identifica utenti presenti sia nel test set che nel training set (mappa ID)
+        test_users = test_matrix.index
+        valid_test_users = test_users.intersection(self.user_ids_map.keys())
+        total_users_to_evaluate = len(valid_test_users)
+
+        if total_users_to_evaluate == 0:
+            logging.warning("Nessun utente in comune tra test_matrix e training set.")
+            return {k: (0.0, 0.0) for k in K_list}
+
+        logging.info(f"Inizio valutazione Precision/Recall per K={K_list}, soglia={relevant_threshold}...")
+        logging.info(f"Valutazione su {total_users_to_evaluate} utenti comuni.")
+
+        # Itera sugli utenti validi
+        for user_id in valid_test_users:
+            processed_users += 1
+
+            # 1. Trova gli item rilevanti per l'utente nel test set
+            test_user_ratings = test_matrix.loc[user_id]
+            relevant_items_in_test = set(test_user_ratings[test_user_ratings >= relevant_threshold].index)
+            relevant_items_count = len(relevant_items_in_test)
+
+            # Se l'utente non ha item rilevanti nel test set, salta
+            if relevant_items_count == 0:
+                continue
+
+            # 2. Ottieni le raccomandazioni TOP K (ordinate) per l'utente
+            try:
+                user_predictions_df = self._get_predictions(user_id, self._train_matrix, exclude=True)
+                # Prendiamo solo gli indici (movieId) ordinati, fino al max K necessario
+                recommended_items_ordered = user_predictions_df.head(max_K).index.tolist()
+            except ValueError:  # Potrebbe accadere se l'utente non è nella mappa (anche se filtrato)
+                logging.warning(f"User ID {user_id} non trovato durante _get_predictions (imprevisto). Skipping.")
+                continue
+            except Exception as e:
+                logging.error(f"Errore inatteso ottenendo predizioni P/R per user {user_id}: {e}")
+                continue
+
+            # 3. Calcola P@k e R@k per ogni k in K_list
+            for k in K_list:
+                if k <= 0:
+                    continue  # Salta K non validi
+
+                # Considera solo i primi 'k' elementi raccomandati
+                recommended_at_k = set(recommended_items_ordered[:k])
+
+                # Calcola True Positives come intersezione tra i primi k raccomandati e i rilevanti
+                true_positives_at_k = len(recommended_at_k.intersection(relevant_items_in_test))
+
+                # Calcola Precision@k
+                precision_at_k = true_positives_at_k / k
+
+                # Calcola Recall@k
+                # La divisione per relevant_items_count è sicura perché abbiamo controllato che sia > 0
+                recall_at_k = true_positives_at_k / relevant_items_count
+
+                # Accumula le somme per le medie finali
+                precision_sum[k] += precision_at_k
+                recall_sum[k] += recall_at_k
+                evaluated_user_count[k] += 1  # Incrementa il contatore SOLO se l'utente è stato valutato per questo K
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+
+        logging.info(f"Valutazione Precision/Recall completata in {elapsed_time:.2f} secondi.")
+
+        # 4. Calcola le medie finali
+        results = {}
+
+        logging.info("--- Risultati Medi Precision/Recall ---")
+        for k in K_list:
+            if k <= 0:
+                continue
+            user_count_for_k = evaluated_user_count[k]
+            if user_count_for_k > 0:
+                avg_precision = precision_sum[k] / user_count_for_k
+                avg_recall = recall_sum[k] / user_count_for_k
+                results[k] = (avg_precision, avg_recall)
+                logging.info(f"  K={k:<3} (Utenti={user_count_for_k}): Precision={avg_precision:.6f}, Recall={avg_recall:.6f}")
+            else:
+                # Se nessun utente è stato valutato per questo K (improbabile se total_users > 0 ma possibile)
+                results[k] = (0.0, 0.0)
+                logging.info(f"  K={k:<3}: Nessun utente valutato.")
+        return results

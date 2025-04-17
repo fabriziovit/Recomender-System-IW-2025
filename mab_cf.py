@@ -1,20 +1,22 @@
-from typing import Optional
+import logging
 import numpy as np
 import pandas as pd
-from sklearn.neighbors import NearestNeighbors
-from cf_recommender import CollaborativeRecommender
-from epsilon_mab import EpsGreedyMAB
+from typing import Optional
 from utils import min_max_normalize
+from epsilon_mab import EpsGreedyMAB
+from cf_recommender import CollaborativeRecommender
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame) -> None:
-    print("\nStatistiche finali del bandit:")
+    logging.info("\nStatistiche finali del bandit:")
     top_n_arms = bandit_mab.get_top_n()  # Restituisce i top N bracci con i relativi Q-values ordinati
     for i, (curr_arm, q_value) in enumerate(top_n_arms):
         curr_movie_id = df_recommendations.iloc[curr_arm]["movieId"]
         curr_movie_title = df_recommendations.iloc[curr_arm]["title"]
 
-        print(
+        logging.info(
             f"  - Arm {curr_arm}: (Movie ID {curr_movie_id}, '{curr_movie_title}') "
             f"con Q = {bandit_mab.get_qvalues()[curr_arm]:.2f}, reward_tot = {bandit_mab.get_total_rewards_list()[curr_arm]:.2f}"
             f" e selezionato {bandit_mab.get_clicks_for_arm()[curr_arm]} volte"
@@ -22,7 +24,7 @@ def _print_final_stats(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFram
 
 
 def _get_topk_movies(bandit_mab: EpsGreedyMAB, df_recommendations: pd.DataFrame) -> None:
-    print("\nTop film raccomandati:")
+    logging.info("\nTop film raccomandati:")
     top_n_arms = bandit_mab.get_top_n()
     topk = []
     for i, (curr_selected_arm, q_value) in enumerate(top_n_arms):
@@ -47,9 +49,9 @@ def _start_rounds_cf_item(
     df_ratings: pd.DataFrame,
 ) -> None:
 
-    print(f"Numero di bracci nel bandit: {bandit_mab._n_arms}")
-    print(f"Numero di righe in df_recommendations: {len(df_recommendations)}")
-    print(f"Dimensione di sim_scores: {len(sim_scores)}")
+    logging.info(f"Numero di bracci nel bandit: {bandit_mab._n_arms}")
+    logging.info(f"Numero di righe in df_recommendations: {len(df_recommendations)}")
+    logging.info(f"Dimensione di sim_scores: {len(sim_scores)}")
 
     for i in range(0, num_rounds):
 
@@ -71,10 +73,10 @@ def _start_rounds_cf_item(
         hybrid_reward = compute_reward_item(curr_similarity, curr_mean, beta=0.8)
 
         """
-        print(f"Round {i}:")
-        print(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
-        print(f"  - Similarità: {curr_similarity:.3f}, Mean Normalizzata: {curr_mean:.3f}, Hybrid reward: {hybrid_reward:.3f}")
-        print()'
+        logging.info(f"Round {i}:")
+        logging.info(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
+        logging.info(f"  - Similarità: {curr_similarity:.3f}, Mean Normalizzata: {curr_mean:.3f}, Hybrid reward: {hybrid_reward:.3f}")
+        logging.info()'
         """
 
         # Aggiorna il bandit con la reward calcolata
@@ -132,19 +134,19 @@ def _start_rounds_cf_user(
 
         curr_movie_id: int = df_recommendations.iloc[curr_arm]["movieId"]
         curr_movie_title: str = df_recommendations.iloc[curr_arm]["title"]
-        print(f"\ncurr_selected_arm: {curr_arm}")
-        print(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
+        logging.info(f"\ncurr_selected_arm: {curr_arm}")
+        logging.info(f"curr_movie_id: {curr_movie_id}, curr_movie_title: {curr_movie_title}")
 
-        prediction: float = recomm.get_prediction(user_id, curr_movie_id, NN=20)
+        prediction: float = recomm.get_prediction_value_clipped(user_id, curr_movie_id, NN=20)
 
         """ La reward è direttamente proporzionale alla predizione del rating.
         L'idea è premiare i bracci (film) per i quali il modello user-based predice 
         un rating più alto per l'utente target."""
         reward: float = min_max_normalize(prediction, min_val=0.5, max_val=5.0)
 
-        # print(f"Round {i}:")
-        # print(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
-        # print(f"  - Mean-Centered Prediction (before normalization): {prediction:.3f}, Reward (normalized prediction): {reward:.3f}")
+        # logging.info(f"Round {i}:")
+        # logging.info(f"  - Braccio selezionato: {curr_arm} -> MovieId: {curr_movie_id}, titolo: {curr_movie_title}")
+        # logging.info(f"  - Mean-Centered Prediction (before normalization): {prediction:.3f}, Reward (normalized prediction): {reward:.3f}")
 
         # Aggiorna il bandit con la reward calcolata
         bandit_mab.update(curr_arm, reward)
@@ -165,7 +167,7 @@ def _mab_on_collabfilter_user(
 
     # Resetta l'indice del DataFrame delle raccomandazioni per renderlo compatibile con il bandit
     df_recommendations.reset_index(drop=False, inplace=True)
-    print(f"Reccomendations:\n {df_recommendations}")
+    logging.info(f"Reccomendations:\n {df_recommendations}")
 
     # Istanziazione del bandit Epislon-Greedy MAB
     bandit_mab = EpsGreedyMAB(n_arms=NN, epsilon=0.9, Q0=0.0)
@@ -175,7 +177,7 @@ def _mab_on_collabfilter_user(
 
     _print_final_stats(bandit_mab, df_recommendations)
 
-    print(f"{_get_topk_movies(bandit_mab, df_recommendations)}")
+    logging.info(f"{_get_topk_movies(bandit_mab, df_recommendations)}")
 
     # Recupera i top k film raccomandati con il bandit
     return _get_topk_movies(bandit_mab, df_recommendations)

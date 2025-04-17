@@ -1,42 +1,46 @@
-import requests
 import csv
-from SPARQLWrapper import SPARQLWrapper, JSON
+import logging
 from collections import defaultdict
+from SPARQLWrapper import SPARQLWrapper, JSON
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
 
 def normalize_string(s):
     """Normalizza una stringa sostituendo vari caratteri speciali e rimuovendo punteggiatura superflua."""
     import unicodedata
     import re
-    
+
     # Normalizzazione Unicode (decomposizione seguita da ricomposizione)
-    s = unicodedata.normalize('NFKD', s)
-    
+    s = unicodedata.normalize("NFKD", s)
+
     # Sostituzione di vari tipi di trattini con un trattino standard
-    trattini = ['-', '–', '—', '−', '‐', '‑', '‒', '–', '—', '―']
+    trattini = ["-", "–", "—", "−", "‐", "‑", "‒", "–", "—", "―"]
     for trattino in trattini:
-        s = s.replace(trattino, '-')
-    
+        s = s.replace(trattino, "-")
+
     # Sostituzione di vari tipi di apostrofi e virgolette
-    apostrofi = ['\'', ''', ''', '`', '´', '"', '"', '"']
+    apostrofi = ["'", """, """, "`", "´", '"', '"', '"']
     for apostrofo in apostrofi:
         s = s.replace(apostrofo, "'")
-    
+
     # Rimozione di spazi multipli
-    s = re.sub(r'\s+', ' ', s)
-    
+    s = re.sub(r"\s+", " ", s)
+
     # Rimozione di spazi attorno ai trattini
-    s = re.sub(r'\s*-\s*', '-', s)
-    
+    s = re.sub(r"\s*-\s*", "-", s)
+
     # Conversione a minuscolo (opzionale, attivare se necessario)
     # s = s.lower()
-    
+
     # Rimozione di punteggiatura superflua (opzionale, attivare se necessario)
     # s = re.sub(r'[^\w\s-]', '', s)
-    
+
     # Rimozione di spazi iniziali e finali
     s = s.strip()
-    
+
     return s
+
 
 def compare_strings(str1, str2, case_sensitive=True, ignore_punctuation=False):
     """Confronta due stringhe dopo normalizzazione.
@@ -47,22 +51,23 @@ def compare_strings(str1, str2, case_sensitive=True, ignore_punctuation=False):
     Returns:
         bool: True se le stringhe sono considerate uguali dopo la normalizzazione"""
     import re
-    
+
     # Normalizzazione di base
     norm1 = normalize_string(str1)
     norm2 = normalize_string(str2)
-    
+
     # Opzioni aggiuntive
     if not case_sensitive:
         norm1 = norm1.lower()
         norm2 = norm2.lower()
-    
+
     if ignore_punctuation:
-        norm1 = re.sub(r'[^\w\s]', '', norm1)
-        norm2 = re.sub(r'[^\w\s]', '', norm2)
-    
+        norm1 = re.sub(r"[^\w\s]", "", norm1)
+        norm2 = re.sub(r"[^\w\s]", "", norm2)
+
     # Confronto finale
     return norm1 == norm2
+
 
 def get_director_by_movie_id(csv_file, movie_id):
     """Ottiene il regista di un film dal file CSV dato il movieId.
@@ -72,19 +77,20 @@ def get_director_by_movie_id(csv_file, movie_id):
     Returns:
         str: Nome del regista o None se non trovato"""
     try:
-        with open(csv_file, 'r', encoding='utf-8') as file:
+        with open(csv_file, "r", encoding="utf-8") as file:
             reader = csv.DictReader(file)
             for row in reader:
-                if int(row['movieId']) == movie_id:
-                    director = row.get('dbpedia_director') 
-                    if director.endswith(')'):
-                        director = director.rsplit('(', 1)[0].strip()
+                if int(row["movieId"]) == movie_id:
+                    director = row.get("dbpedia_director")
+                    if director.endswith(")"):
+                        director = director.rsplit("(", 1)[0].strip()
                     return director
         return None
     except Exception as e:
-        print(f"Errore nella lettura del CSV: {e}")
+        logging.info(f"Errore nella lettura del CSV: {e}")
         return None
-    
+
+
 def get_title_by_movie_id(csv_file, movie_id):
     """Ottiene il regista di un film dal file CSV dato il movieId.
     Args:
@@ -93,25 +99,26 @@ def get_title_by_movie_id(csv_file, movie_id):
     Returns:
         str: Nome del regista o None se non trovato"""
     try:
-        with open(csv_file, 'r', encoding='utf-8') as file:
+        with open(csv_file, "r", encoding="utf-8") as file:
             reader = csv.DictReader(file)
             for row in reader:
-                if int(row['movieId']) == movie_id:
-                    movie_title = row.get('title')
+                if int(row["movieId"]) == movie_id:
+                    movie_title = row.get("title")
                     # Rimuove l'anno dal titolo del film se presente
-                    if movie_title.endswith(')'):
-                        movie_title = movie_title.rsplit('(', 1)[0].strip()
+                    if movie_title.endswith(")"):
+                        movie_title = movie_title.rsplit("(", 1)[0].strip()
                     return movie_title
         return None
     except Exception as e:
-        print(f"Errore nella lettura del CSV: {e}")
+        logging.info(f"Errore nella lettura del CSV: {e}")
         return None
-    
+
+
 def get_release_year_from_wikidata(film_title, director_name):
     """Ottiene l'anno di uscita di un film da Wikidata, filtrando per titolo e regista."""
     sparql = SPARQLWrapper("https://query.wikidata.org/sparql")
 
-    sparql.addCustomHttpHeader('User-Agent', 'MyRecommederSystem/1.0 (your@email.com)')
+    sparql.addCustomHttpHeader("User-Agent", "MyRecommederSystem/1.0 (your@email.com)")
 
     query = f"""
     PREFIX wd: <http://www.wikidata.org/entity/>
@@ -130,14 +137,15 @@ def get_release_year_from_wikidata(film_title, director_name):
     """
     sparql.setQuery(query)
     sparql.setReturnFormat(JSON)
-    
+
     try:
         results = sparql.query().convert()
         for result in results["results"]["bindings"]:
             return result["anno"]["value"]
     except Exception as e:
-        print(f"Errore durante la query Wikidata: {e}")
+        logging.info(f"Errore durante la query Wikidata: {e}")
     return "N/A"
+
 
 def get_directed_films_with_actors(director_name):
     """Ottiene i film diretti da un regista con attori e prova a recuperare l'anno di uscita da Wikidata."""
@@ -157,44 +165,40 @@ def get_directed_films_with_actors(director_name):
     ORDER BY ?titolo
     LIMIT 100
     """
-    
+
     sparql.setQuery(query)
     sparql.setReturnFormat(JSON)
-    
+
     try:
         results = sparql.query().convert()
         films_dict = defaultdict(lambda: {"titolo": "", "anno": "N/A", "attori": set()})
-        
+
         for result in results["results"]["bindings"]:
             film_uri = result["film"]["value"]
             film_title = result["titolo"]["value"]
             films_dict[film_uri]["titolo"] = film_title
-            
+
             if "actorName" in result:
                 films_dict[film_uri]["attori"].add(result["actorName"]["value"])
-        
+
         films_list = []
         for uri, info in films_dict.items():
-            title=info["titolo"]
-            if title.endswith(')'):
-                title_striped = title.rsplit('(', 1)[0].strip()
+            title = info["titolo"]
+            if title.endswith(")"):
+                title_striped = title.rsplit("(", 1)[0].strip()
             else:
                 title_striped = title
             anno = get_release_year_from_wikidata(title_striped, director_name)  # Recupera l'anno da Wikidata
-            films_list.append({
-                "uri": uri,
-                "titolo": info["titolo"],
-                "anno": anno,
-                "attori": sorted(list(info["attori"]))
-            })
-        
+            films_list.append({"uri": uri, "titolo": info["titolo"], "anno": anno, "attori": sorted(list(info["attori"]))})
+
         # Ordina per anno (dal più recente) gestendo "N/A" o None come 0
         films_list.sort(key=lambda x: int(x["anno"]) if x["anno"] not in [None, "N/A"] else 0, reverse=True)
         return films_list
-    
+
     except Exception as e:
-        print(f"Errore durante la query DBpedia: {e}")
+        logging.info(f"Errore durante la query DBpedia: {e}")
         return []
+
 
 def recommend_films_with_actors(director_name, max_actors=5, title=None, movie_title_selected=False):
     """Restituisce una struttura dati di film raccomandati con attori.
@@ -206,23 +210,17 @@ def recommend_films_with_actors(director_name, max_actors=5, title=None, movie_t
     Returns:
         dict: Un dizionario contenente la lista dei film raccomandati e informazioni sul regista"""
     films = get_directed_films_with_actors(director_name)
-    
+
     if not films:
-        return {
-            "success": False,
-            "message": f"Nessun film trovato per {director_name} o si è verificato un errore.",
-            "director": director_name,
-            "total_films": 0,
-            "films": []
-        }
-    
+        return {"success": False, "message": f"Nessun film trovato per {director_name} o si è verificato un errore.", "director": director_name, "total_films": 0, "films": []}
+
     recommended_films = []
     max_film = 6
     index = 1
-    
+
     if title:
         title = normalize_string(title)
-    
+
     for i, film in enumerate(films, 1):
         if i < max_film:
             if movie_title_selected:
@@ -230,41 +228,37 @@ def recommend_films_with_actors(director_name, max_actors=5, title=None, movie_t
                 if compare_strings(title, title_query):
                     max_film += 1
                     continue
-            
-            film_data = {
-                "id": index,
-                "title": film['titolo'],
-                "year": film["anno"],
-                "actors": []
-            }
-            
+
+            film_data = {"id": index, "title": film["titolo"], "year": film["anno"], "actors": []}
+
             # Aggiungiamo gli attori se disponibili
             if film["attori"]:
                 # Limitiamo a massimo max_actors attori per film
                 actors_to_show = film["attori"][:max_actors]
                 for actor in actors_to_show:
                     film_data["actors"].append(actor)
-                
+
                 # Aggiungiamo informazioni sugli attori rimanenti
                 film_data["additional_actors_count"] = max(0, len(film["attori"]) - max_actors)
-            
+
             recommended_films.append(film_data)
             index += 1
         else:
             break
-    
+
     result = {
         "success": True,
         "director": director_name,
         "max_actors_shown": max_actors,
         "total_films_found": len(films),
         "films_shown": len(recommended_films),
-        "films": recommended_films
+        "films": recommended_films,
     }
-    
+
     return result
 
-def recommend_by_movie_id(csv_file, movie_id, max_actors=5, movie_title_selected = False):
+
+def recommend_by_movie_id(csv_file, movie_id, max_actors=5, movie_title_selected=False):
     """Dato un movieId, trova il regista nel CSV e mostra raccomandazioni di altri suoi film.
     Args:
         csv_file (str): Percorso del file CSV
@@ -272,10 +266,10 @@ def recommend_by_movie_id(csv_file, movie_id, max_actors=5, movie_title_selected
         max_actors (int): Numero massimo di attori da mostrare per film"""
     director = get_director_by_movie_id(csv_file, movie_id)
     title = get_title_by_movie_id(csv_file, movie_id)
-    
+
     if not director:
-        print(f"Nessun regista trovato per il film con ID {movie_id}")
+        logging.info(f"Nessun regista trovato per il film con ID {movie_id}")
         return
-    
-    print(f"Trovato regista: {director} per il film con ID {movie_id}")
+
+    logging.info(f"Trovato regista: {director} per il film con ID {movie_id}")
     return recommend_films_with_actors(director, max_actors, title, movie_title_selected)
