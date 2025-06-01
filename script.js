@@ -39,15 +39,16 @@ async function searchMovies() {
       body: JSON.stringify({ query }),
     });
     const results = await response.json();
+    console.log(results);
 
     for (const result of results) {
-      result.title = shortenTitle(result.title, 22);
-      if (result.genres.length > 30) {
-        result.genres = result.genres.substring(0, 30) + '...';
+      result.title = shortenTitle(result.title, 130);
+      if (result.genres.length > 130) {
+        result.genres = result.genres.substring(0, 130) + '...';
       }
     }
 
-    displayResults('searchResults', results, ['id', 'title', 'genres']);
+    displaySearchResults('searchResults', results, ['id', 'title', 'genres']);
   } catch (error) {
     displayError('searchResults', error);
   } finally {
@@ -283,7 +284,6 @@ async function getItemRecommendationsWithMab() {
 }
 
 async function getUserRecommendations() {
-
   const userId = document.getElementById('userId').value;
   if (!userId) {
     displayError('userResults', 'Please enter a user ID');
@@ -299,7 +299,7 @@ async function getUserRecommendations() {
     });
 
     const data = await response.json();
-    
+
     if (!response.ok || data.error) {
       displayError(
         'userResults',
@@ -789,6 +789,228 @@ async function displayResults(elementId, data, columns) {
           abstract.textContent =
             abstractText.length > 150
               ? abstractText.substring(0, 150) + '...'
+              : abstractText;
+          additionalInfo.appendChild(abstract);
+        }
+
+        // Aggiungi regista se disponibile
+        if (item.dbpedia_director) {
+          const director = document.createElement('p');
+          director.innerHTML = `<strong>Director:</strong> ${item.dbpedia_director}`;
+          additionalInfo.appendChild(director);
+        }
+
+        infoContainer.appendChild(additionalInfo);
+      }
+
+      listItem.appendChild(infoContainer);
+      list.appendChild(listItem);
+    }
+
+    element.appendChild(list);
+
+    element.scrollTop = 0;
+  } else {
+    displayEmptyState(element);
+
+    element.scrollTop = 0;
+  }
+}
+
+async function displaySearchResults(elementId, data, columns) {
+  const element = document.getElementById(elementId);
+  element.innerHTML = '';
+
+  // Verifica se i dati sono nel nuovo formato con original_movie e recommendations
+  const hasOriginalMovie =
+    data && data.original_movie && data.original_movie.title;
+  const results = hasOriginalMovie
+    ? data.recommendations
+    : data.results || data;
+
+  if (results && results.length > 0) {
+    // Se abbiamo informazioni sul film originale, creiamo un banner in cima
+    if (hasOriginalMovie) {
+      const originalMovieBanner = document.createElement('div');
+      originalMovieBanner.className = 'original-movie-banner';
+
+      const bannerTitle = document.createElement('h3');
+      bannerTitle.textContent = 'Raccomandazioni basate su:';
+
+      const movieTitle = document.createElement('div');
+      movieTitle.className = 'original-movie-title';
+      movieTitle.textContent = data.original_movie.title;
+
+      // Se è disponibile anche l'ID, lo mostriamo
+      if (data.original_movie.movieId) {
+        const movieId = document.createElement('span');
+        movieId.className = 'original-movie-id';
+        movieId.textContent = `ID: ${data.original_movie.movieId}`;
+        movieTitle.appendChild(movieId);
+      }
+
+      originalMovieBanner.appendChild(bannerTitle);
+      originalMovieBanner.appendChild(movieTitle);
+      element.appendChild(originalMovieBanner);
+    } else if (data.userId) {
+      const userBanner = document.createElement('div');
+      userBanner.className = 'original-movie-banner';
+
+      const bannerTitle = document.createElement('h3');
+      bannerTitle.textContent = "Raccomandazioni basate sull'utente:";
+
+      const userIdElement = document.createElement('div');
+      userIdElement.className = 'original-movie-title';
+      userIdElement.textContent = `User ID: ${data.userId}`;
+
+      userBanner.appendChild(bannerTitle);
+      userBanner.appendChild(userIdElement);
+      element.appendChild(userBanner);
+    }
+
+    const list = document.createElement('ul');
+    list.className = 'movie-list';
+
+    // Processa ogni film nella lista dei risultati
+    for (const item of results) {
+      const listItem = document.createElement('li');
+      listItem.className = 'movie-card-with-poster';
+      listItem.style.cursor = 'pointer'; // Aggiunge effetto cliccabile
+      listItem.onclick = () => getMovieDetailsFromId(item.movieId); // Aggiungi evento click
+
+      // Aggiunta del poster del film
+      const posterContainer = document.createElement('div');
+      posterContainer.className = 'poster-container';
+
+      const posterImg = document.createElement('img');
+      posterImg.className = 'movie-poster';
+      posterImg.src = 'https://placehold.co/140x210/png?text=Loading...';
+      posterImg.alt = `${item.title || 'Movie'} poster`;
+
+      // Carica poster in modo asincrono
+      if (item.tmdbId || item.imdbId) {
+        getMoviePoster(item.tmdbId, item.imdbId).then((url) => {
+          posterImg.src = url;
+        });
+      } else {
+        posterImg.src = 'https://placehold.co/140x210/png?text=No+Poster';
+      }
+
+      posterContainer.appendChild(posterImg);
+      listItem.appendChild(posterContainer);
+
+      // Contenitore per le informazioni
+      const infoContainer = document.createElement('div');
+      infoContainer.className = 'movie-info';
+
+      // Header con titolo
+      const header = document.createElement('div');
+      header.className = 'movie-header';
+
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'movie-title';
+      titleSpan.textContent = item.title || 'Unknown Title';
+      header.appendChild(titleSpan);
+
+      if (item.movieId) {
+        const idBadge = document.createElement('span');
+        idBadge.className = 'movie-id';
+        idBadge.textContent = `ID: ${item.movieId}`;
+        header.appendChild(idBadge);
+      }
+
+      infoContainer.appendChild(header);
+
+      // Metadata del film (anno, durata, genere)
+      const metadata = document.createElement('div');
+      metadata.className = 'movie-metadata';
+
+      // Anno (se disponibile)
+      if (item.year) {
+        const yearItem = document.createElement('span');
+        yearItem.className = 'metadata-item';
+        yearItem.innerHTML = `<i class="far fa-calendar-alt"></i> ${item.year}`;
+        metadata.appendChild(yearItem);
+      }
+
+      // Generi (se disponibili)
+      if (item.genres) {
+        const genreItem = document.createElement('span');
+        genreItem.className = 'metadata-item';
+        genreItem.innerHTML = `<i class="fas fa-film"></i> ${item.genres}`;
+        metadata.appendChild(genreItem);
+      }
+
+      // Durata (se disponibile)
+      if (item.runtime) {
+        const runtimeItem = document.createElement('span');
+        runtimeItem.className = 'metadata-item';
+        runtimeItem.innerHTML = `<i class="far fa-clock"></i> ${item.runtime} min`;
+        metadata.appendChild(runtimeItem);
+      }
+
+      // Valutazione (se disponibile)
+      if (item.avg_rating) {
+        const ratingItem = document.createElement('span');
+        ratingItem.className = 'metadata-item';
+        ratingItem.innerHTML = `<i class="fas fa-star"></i> ${parseFloat(
+          item.avg_rating
+        ).toFixed(1)}`;
+        metadata.appendChild(ratingItem);
+      }
+
+      infoContainer.appendChild(metadata);
+
+      // Contenuto principale
+      const content = document.createElement('div');
+      content.className = 'movie-content';
+
+      // Aggiungi le altre colonne specificate
+      columns.forEach((col) => {
+        // Salta colonne già mostrate
+        if (
+          [
+            'title',
+            'id',
+            'genres',
+            'year',
+            'runtime',
+            'avg_rating',
+            'values',
+          ].includes(col)
+        )
+          return;
+
+        const detail = document.createElement('div');
+        detail.className = 'movie-detail';
+
+        const label = document.createElement('span');
+        label.className = 'detail-label';
+        label.textContent = col.charAt(0).toUpperCase() + col.slice(1) + ':';
+
+        const value = document.createElement('span');
+        value.className = 'detail-value';
+        value.textContent = item[col];
+
+        detail.appendChild(label);
+        detail.appendChild(value);
+        content.appendChild(detail);
+      });
+
+      infoContainer.appendChild(content);
+
+      // Aggiungi informazioni aggiuntive (se disponibili)
+      if (item.dbpedia_abstract || item.overview) {
+        const additionalInfo = document.createElement('div');
+        additionalInfo.className = 'additional-movie-info';
+
+        // Aggiungi la sinossi/abstract se disponibile
+        if (item.dbpedia_abstract || item.overview) {
+          const abstract = document.createElement('p');
+          const abstractText = item.dbpedia_abstract || item.overview;
+          abstract.textContent =
+            abstractText.length > 460
+              ? abstractText.substring(0, 460) + '...'
               : abstractText;
           additionalInfo.appendChild(abstract);
         }

@@ -235,11 +235,11 @@ button i {
 
 .results {
   margin-top: 1.5rem;
-  max-height: 300px;
+  max-height: 272px;
   overflow-y: auto;
   border-radius: var(--border-radius);
   background-color: var(--light-color);
-  padding: 0.5rem;
+  padding: 16px;
 }
 
 .results:empty {
@@ -249,6 +249,9 @@ button i {
 /* Improved movie result cards */
 .movie-list {
   list-style-type: none;
+  width: 100%;
+  overflow: hidden;
+  height: 100%;
 }
 
 /* Styling for results list and items */

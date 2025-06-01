@@ -23,21 +23,22 @@
       <h2 class="category-title">
         <i class="fas fa-search"></i> Movie Search & Information
       </h2>
-      <div class="sections-container-first">
-        <div class="section">
-          <h2><i class="fas fa-search"></i> Search Movie</h2>
-          <div class="input-group">
-            <input type="text" id="searchQuery" placeholder="Enter movie title" />
-          </div>
-          <button onclick="searchMovies()">
-            <i class="fas fa-search"></i> Search
-          </button>
-          <div id="searchLoading" class="loading">
-            <i class="fas fa-spinner"></i>
-          </div>
-          <div id="searchResults" class="results"></div>
-        </div>
 
+      <div class="section" style="max-width: 60%;margin: auto;margin-bottom: 15px;">
+        <h2><i class="fas fa-search"></i> Search Movie</h2>
+        <div class="input-group">
+          <input type="text" id="searchQuery" placeholder="Enter movie title" />
+        </div>
+        <button onclick="searchMovies()">
+          <i class="fas fa-search"></i> Search
+        </button>
+        <div id="searchLoading" class="loading">
+          <i class="fas fa-spinner"></i>
+        </div>
+        <div id="searchResults" class="results"></div>
+      </div>
+
+      <div class="sections-container">
         <div class="section">
           <h2><i class="fas fa-info-circle"></i> Movie Details</h2>
           <div class="input-group">
