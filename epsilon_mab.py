@@ -1,5 +1,4 @@
 from typing import Optional
-from typing import Optional
 import numpy as np
 from abc import ABC, abstractmethod
 
@@ -7,8 +6,8 @@ from abc import ABC, abstractmethod
 # *** Base MAB class ***#
 class MAB(ABC):
     """Base class for a contextual Multi-Armed Bandit (MAB)
-    n_arms: Numero di bracci
-    n_dims: Numero di dimensioni del contesto (solo per bandit contestuali)"""
+    n_arms: Number of arms
+    n_dims: Number of context dimensions (only for contextual bandits)"""
 
     def __init__(self, n_arms: int, n_dims: Optional[int] = None):
         if not isinstance(n_arms, int):
@@ -45,30 +44,30 @@ class MAB(ABC):
 
     @abstractmethod
     def play(self, context: Optional[np.ndarray] = None) -> int:
-        """Deve restituire un braccio (arm) da selezionare."""
+        """Must return an arm to select."""
         self._context = self._validate_context(context)
 
     @abstractmethod
     def update(self, arm: int, reward: float, context: Optional[float] = None) -> None:
-        """Aggiorna il valore del braccio selezionato con la ricompensa ottenuta."""
+        """Updates the value of the selected arm with the obtained reward."""
         self._arm = self._validate_arm(arm)
         self._reward = self._validate_reward(reward)
         self._context = self._validate_context(context)
 
 
 def get_best_arm(qvalues: np.ndarray) -> int:
-    """Sceglie il braccio con reward massima.
-    Se ci sono più bracci con lo stesso valore massimo, ne seleziona uno."""
-    indices = np.argwhere(qvalues == np.max(qvalues))  # Trova tutti gli indici con valore massimo
-    idx = np.random.randint(0, len(indices))  # Sceglie casualmente tra questi
-    return indices[idx][0]  # Restituisce l'indice scelto (il primo se ci sono più indici con lo stesso valore)
+    """Chooses the arm with maximum reward.
+    If there are multiple arms with the same maximum value, selects one of them."""
+    indices = np.argwhere(qvalues == np.max(qvalues))  # Find all indices with maximum value
+    idx = np.random.randint(0, len(indices))  # Randomly choose among these
+    return indices[idx][0]  # Return the chosen index (the first if there are multiple indices with the same value)
 
 
 # *** Epsilon-Greedy MAB ****#
 class EpsGreedyMAB(MAB):
     """Epsilon-Greedy multi-armed bandit
-    :param n_arms : int [Number of arms (es. film da raccomandare)].
-    :param n_dims: int [Numero di dimensioni del contesto (opzionale)]
+    :param n_arms : int [Number of arms (e.g. movies to recommend)].
+    :param n_dims: int [Number of context dimensions (optional)]
     :param epsilon : float [Explore probability]
     :param Q0 : float [Initial value for the reward estimate of arms.]
     """
@@ -83,15 +82,15 @@ class EpsGreedyMAB(MAB):
             raise TypeError("Q0 must be a float")
         self._initial_epsilon = epsilon
         self._curr_epsilon = epsilon
-        self._epsilon_decay_function = None  # Funzione di decay dell'epsilon
-        self._qvalues = np.full(n_arms, Q0)  # Per decidere quale braccio "sfruttare" (exploitation)
+        self._epsilon_decay_function = None  # Epsilon decay function
+        self._qvalues = np.full(n_arms, Q0)  # To decide which arm to "exploit" (exploitation)
         self._total_rewards = np.zeros(n_arms)
         self._clicks = np.zeros(n_arms)
-        self._nexploitation = 0  # Numero di sfruttamenti effettuati
-        self._nexploration = 0  # Numero di esplorazioni effettuate
+        self._nexploitation = 0  # Number of exploitations performed
+        self._nexploration = 0  # Number of explorations performed
 
     def play(self, context: Optional[np.ndarray] = None) -> int:
-        """Deve restituire un braccio (arm) da selezionare."""
+        """Must return an arm to select."""
         super().play(context)
         p = np.random.uniform(0, 1)
         if p <= self._curr_epsilon:  # Exploration
@@ -103,11 +102,11 @@ class EpsGreedyMAB(MAB):
         return arm
 
     def update(self, arm: int, reward: float, context: Optional[np.ndarray] = None) -> None:
-        """Aggiorna il valore del braccio selezionato con la ricompensa ottenuta."""
+        """Updates the value of the selected arm with the obtained reward."""
         super().update(arm, reward, context)
         self._clicks[arm] += 1
         self._total_rewards[arm] += reward
-        # Mantiene la media delle ricompense osservate per ogni braccio.
+        # Maintains the average of observed rewards for each arm.
         self._qvalues[arm] = self._total_rewards[arm] / self._clicks[arm]
 
     def get_narms(self) -> int:
@@ -129,14 +128,14 @@ class EpsGreedyMAB(MAB):
         return self._curr_epsilon
 
     def get_top_n(self) -> list[tuple[int, float]]:
-        # Creiamo una lista di tuple (indice, Q-value)
+        # Create a list of tuples (index, Q-value)
         qvalues_with_indices = list(zip(range(self.get_narms()), self.get_qvalues()))
-        # Ordiniamo la lista in base al Q-value
+        # Sort the list based on Q-value
         qvalues_with_indices_sorted = sorted(qvalues_with_indices, key=lambda x: x[1], reverse=True)
         return qvalues_with_indices_sorted
 
     def set_epsilon_deacy(self, function: callable) -> None:
-        """Setta la funzione di decay dell'epsilon."""
+        """Sets the epsilon decay function."""
         if not callable(function):
             raise TypeError("function must be callable")
         self._epsilon_decay_function = function
@@ -147,6 +146,6 @@ class EpsGreedyMAB(MAB):
         new_epsilon = self._epsilon_decay_function(self._initial_epsilon, num_round)
         if not isinstance(new_epsilon, (float, np.floating)):
             raise TypeError("epsilon must be float")
-        # Assicura che epsilon sia tra 0 e 1 (Clamping)
+        # Ensure epsilon is between 0 and 1 (Clamping)
         new_epsilon = max(0.0, min(1.0, new_epsilon))
         self._curr_epsilon = new_epsilon

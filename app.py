@@ -1,3 +1,4 @@
+# Import necessary libraries
 import os
 import logging
 import numpy as np
@@ -6,16 +7,17 @@ from test_mab import mab
 from flask_cors import CORS
 from fuzzywuzzy import process
 from epsilon_mab import EpsGreedyMAB
-from mf_sgd import MF_SGD_User_Based
-from mab_cf import mab_on_collabfilter
-from mab_cb import mab_on_contentbased
+from latent_factor_model_recomm import MF_SGD_User_Based
+from mab_on_collaborative_filtering import mab_on_collabfilter
+from mab_on_content_based import mab_on_contentbased
 from flask import Flask, request, jsonify
 from sklearn.neighbors import NearestNeighbors
-from cb_recommender import ContentBasedRecommender
-from cf_recommender import CollaborativeRecommender
+from content_based_recomm import ContentBasedRecommender
+from collaborative_filtering_recomm import CollaborativeRecommender
 from utils import load_movielens_data, log_epsilon_decay, exp_epsilon_decay, linear_epsilon_decay
-from director_recommender import recommend_by_movie_id, recommend_films_with_actors
+from director_recomm import recommend_by_movie_id, recommend_films_with_actors
 
+# Configure logger format
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 app = Flask(__name__)
@@ -37,22 +39,25 @@ class MovieRecommenderApp:
         self.collaborative_initialized = False
         self.director_initialized = False
         self.sgd_initialized = False
-        self.movies_with_abstracts_path = "./dataset/movies_with_abstracts_complete.csv"  #! Cambiare path con uno dinamico
+        self.movies_with_abstracts_path = "./dataset/movies_with_abstracts_complete.csv"  # Change path to a dynamic one
         self._load_basic_data()
 
+    # Load MovieLens base datasets and utility matrix
     def _load_basic_data(self) -> None:
         try:
             self.df_movies, self.df_ratings, self.df_tags = load_movielens_data(self.data_dir)
             self.utility_matrix = self.df_ratings.pivot(index="userId", columns="movieId", values="rating").fillna(0)
             self.df_with_abstracts = pd.read_csv(self.movies_with_abstracts_path, dtype={"imdbId": str, "tmdbId": str})
         except Exception as e:
-            logging.info(f"Errore nel caricamento dei dati base: {e}")
+            logging.info(f"Error loading base data: {e}")
 
+    # Use fuzzy matching to find the closest movie title
     def movie_finder(self, title):
         all_titles = self.df_with_abstracts["title"].tolist()
         closest_match = process.extractOne(title, all_titles)
         return closest_match[0]
 
+    # Initialize the content-based recommender
     def initialize_content_recommender(self) -> None:
         if self.content_initialized:
             return
@@ -60,8 +65,9 @@ class MovieRecommenderApp:
             self.content_recommender = ContentBasedRecommender(self.df_with_abstracts)
             self.content_initialized = True
         except Exception as e:
-            logging.info(f"Errore nell'inizializzazione del content recommender: {e}")
+            logging.info(f"Error initializing content recommender: {e}")
 
+    # Initialize the collaborative recommender with KNN models
     def initialize_collaborative_recommender(self, n_neighbors: int = 20) -> None:
         if self.collaborative_initialized:
             return
@@ -73,12 +79,14 @@ class MovieRecommenderApp:
             self.collaborative_recommender.fit_user_model(self.utility_matrix)
             self.collaborative_initialized = True
         except Exception as e:
-            logging.info(f"Errore nell'inizializzazione del collaborative recommender: {e}")
+            logging.info(f"Error initializing collaborative recommender: {e}")
 
+    # Load pretrained matrix factorization model
     def initialize_sgd_recommender(self) -> None:
         self.sgd_model = MF_SGD_User_Based.load_model("models/mf_model_n200_lr0.001_lambda0.0001_norm.pkl")
         self.sgd_initialized = True
 
+    # Check if the director-based recommender can be used
     def check_director_recommender(self) -> bool:
         if os.path.exists(self.movies_with_abstracts_path):
             self.df_with_abstracts = pd.read_csv(self.movies_with_abstracts_path)
@@ -87,20 +95,22 @@ class MovieRecommenderApp:
         else:
             return False
 
+    # Search for movies with titles containing a specific query
     def search_movie_by_title(self, query: str) -> list:
         if self.df_with_abstracts is None:
             return []
-        results = self.df_with_abstracts[self.df_with_abstracts["title"].str.contains(query, case=False, regex=False)].fillna("Dati non trovati")
+        results = self.df_with_abstracts[self.df_with_abstracts["title"].str.contains(query, case=False, regex=False)].fillna("Data not found")
         movies_list = []
         for _, row in results.iterrows():
             movies_list.append(row)
         return movies_list
 
+    # Return movie details including average rating and number of ratings
     def show_movie_details(self, movie_id: int) -> dict:
         if self.df_with_abstracts is None:
             return {}
         try:
-            movie = self.df_with_abstracts[self.df_with_abstracts["movieId"] == movie_id].iloc[0].fillna("Dati non Trovati").to_dict()
+            movie = self.df_with_abstracts[self.df_with_abstracts["movieId"] == movie_id].iloc[0].fillna("Data Not Found").to_dict()
             if self.df_ratings is not None:
                 ratings = self.df_ratings[self.df_ratings["movieId"] == movie_id]
                 if len(ratings) > 0:
@@ -112,6 +122,7 @@ class MovieRecommenderApp:
         except (IndexError, KeyError):
             return {}
 
+    # Run content-based recommendations
     def run_content_recommender(self, movie_title: str, top_n: int = 10) -> pd.DataFrame:
         if not self.content_initialized:
             self.initialize_content_recommender()
@@ -119,6 +130,7 @@ class MovieRecommenderApp:
                 return pd.DataFrame()
         return self.content_recommender.recommend(movie_title, top_n=top_n)
 
+    # Run content-based recommendations with Multi-Armed Bandit
     def run_content_recommender_mab(self, movie_title: str, top_n: int = 10) -> pd.DataFrame:
         if not self.content_initialized:
             self.initialize_content_recommender()
@@ -126,6 +138,7 @@ class MovieRecommenderApp:
                 return pd.DataFrame()
         return mab_on_contentbased(movie_title, self.df_ratings, recommender=self.content_recommender)[:top_n]
 
+    # Run item-based collaborative recommendations
     def run_collaborative_item_recommender(self, movie_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.collaborative_initialized:
             self.initialize_collaborative_recommender()
@@ -133,6 +146,7 @@ class MovieRecommenderApp:
                 return pd.DataFrame()
         return self.collaborative_recommender.get_item_recommendations(movie_id, self.df_movies).head(top_n)
 
+    # Run item-based collaborative recommendations with MAB
     def run_collaborative_item_recommender_mab(self, movie_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.collaborative_initialized:
             self.initialize_collaborative_recommender()
@@ -140,6 +154,7 @@ class MovieRecommenderApp:
                 return pd.DataFrame()
         return mab_on_collabfilter(self.df_ratings, self.df_movies, movie_id, None, recommender=self.collaborative_recommender, utility_matrix=self.utility_matrix)[:top_n]
 
+    # Run user-based collaborative recommendations
     def run_collaborative_user_recommender(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.collaborative_initialized:
             self.initialize_collaborative_recommender()
@@ -147,6 +162,7 @@ class MovieRecommenderApp:
                 return pd.DataFrame()
         return self.collaborative_recommender.get_user_recommendations(user_id, self.df_movies).head(top_n)
 
+    # Run user-based collaborative recommendations with MAB
     def run_collaborative_user_recommender_mab(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.collaborative_initialized:
             self.initialize_collaborative_recommender()
@@ -154,16 +170,19 @@ class MovieRecommenderApp:
                 return pd.DataFrame()
         return mab_on_collabfilter(self.df_ratings, self.df_movies, None, user_id, recommender=self.collaborative_recommender, utility_matrix=self.utility_matrix)[:top_n]
 
+    # Run director-based recommendations using a selected movie
     def run_director_recommender_by_movie(self, movie_id: int, max_actors: int = 5) -> str:
         if not self.check_director_recommender():
             return "Director recommender not available."
         return recommend_by_movie_id(self.movies_with_abstracts_path, movie_id, max_actors=max_actors, movie_title_selected=True)
 
+    # Run director-based recommendations using a director's name
     def run_director_recommender_by_director(self, director: str, max_actors: int = 5) -> str:
         if not self.check_director_recommender():
             return "Director recommender not available."
         return recommend_films_with_actors(director, max_actors=max_actors, movie_title_selected=False)
 
+    # Run matrix factorization (SGD-based) recommendations
     def run_sgd_recommendations(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.sgd_initialized:
             self.initialize_sgd_recommender()
@@ -171,6 +190,7 @@ class MovieRecommenderApp:
                 return pd.DataFrame()
         return self.sgd_model.get_recommendations(self.utility_matrix, user_id=user_id).head(top_n)
 
+    # Run MAB with log epsilon decay on SGD model
     def run_mab_sgd_model_log_epsilon_decay(self, user_id: int, top_n: int = 10) -> pd.DataFrame:
         if not self.sgd_initialized:
             self.initialize_sgd_recommender()
@@ -178,53 +198,56 @@ class MovieRecommenderApp:
                 return pd.DataFrame()
         df_expected = self.sgd_model.get_recommendations(self.utility_matrix, user_id)
         df_expected = df_expected.merge(self.df_movies, on="movieId")[["title", "values"]].sort_index(ascending=True)
-        # Imposta l'indice per renderlo compatibile con il bandit
+        # Set the index to make it compatible with the bandit
         new_index = pd.RangeIndex(df_expected.shape[0], name="idxarm")
         df_expected.reset_index(drop=False, inplace=True)
         df_expected.set_index(new_index, inplace=True)
 
-        bandit_mab = EpsGreedyMAB(n_arms=df_expected.shape[0], epsilon=0.9, Q0=0.0)  #! vedere valore epsilon
+        bandit_mab = EpsGreedyMAB(n_arms=df_expected.shape[0], epsilon=0.9, Q0=0.0)  #! check epsilon value
         bandit_mab.set_epsilon_deacy(log_epsilon_decay)
 
         top_k = mab(df_expected, bandit_mab, num_rounds=10_000)[:top_n]
         return top_k
 
-    def run_mab_sgd_model_exp_epsilon_decay(self, user_id: int, top_n: int = 10) -> pd.DataFrame:  # Da aggiungere chiamata api
+    # Run MAB with exponential epsilon decay on SGD model
+    def run_mab_sgd_model_exp_epsilon_decay(self, user_id: int, top_n: int = 10) -> pd.DataFrame:  # To add API call
         if not self.sgd_initialized:
             self.initialize_sgd_recommender()
             if not self.sgd_initialized:
                 return pd.DataFrame()
         df_expected = self.sgd_model.get_recommendations(self.utility_matrix, user_id)
         df_expected = df_expected.merge(self.df_movies, on="movieId")[["title", "values"]].sort_index(ascending=True)
-        # Imposta l'indice per renderlo compatibile con il bandit
+        # Set the index to make it compatible with the bandit
         new_index = pd.RangeIndex(df_expected.shape[0], name="idxarm")
         df_expected.reset_index(drop=False, inplace=True)
         df_expected.set_index(new_index, inplace=True)
 
-        bandit_mab = EpsGreedyMAB(n_arms=df_expected.shape[0], epsilon=0.9, Q0=0.0)  #! vedere valore epsilon
+        bandit_mab = EpsGreedyMAB(n_arms=df_expected.shape[0], epsilon=0.9, Q0=0.0)  #! check epsilon value
         bandit_mab.set_epsilon_deacy(exp_epsilon_decay)
 
         top_k = mab(df_expected, bandit_mab, num_rounds=10_000)[:top_n]
         return top_k
 
-    def run_mab_sgd_model_linear_epsilon_decay(self, user_id: int, top_n: int = 10) -> pd.DataFrame:  # Da aggiungere chiamata api
+    # Run MAB with linear epsilon decay on SGD model
+    def run_mab_sgd_model_linear_epsilon_decay(self, user_id: int, top_n: int = 10) -> pd.DataFrame:  # To add API call
         if not self.sgd_initialized:
             self.initialize_sgd_recommender()
             if not self.sgd_initialized:
                 return pd.DataFrame()
         df_expected = self.sgd_model.get_recommendations(self.utility_matrix, user_id)
         df_expected = df_expected.merge(self.df_movies, on="movieId")[["title", "values"]].sort_index(ascending=True)
-        # Imposta l'indice per renderlo compatibile con il bandit
+        # Set the index to make it compatible with the bandit
         new_index = pd.RangeIndex(df_expected.shape[0], name="idxarm")
         df_expected.reset_index(drop=False, inplace=True)
         df_expected.set_index(new_index, inplace=True)
 
-        bandit_mab = EpsGreedyMAB(n_arms=df_expected.shape[0], epsilon=0.9, Q0=0.0)  #! vedere valore epsilon
+        bandit_mab = EpsGreedyMAB(n_arms=df_expected.shape[0], epsilon=0.9, Q0=0.0)  #! check epsilon value
         bandit_mab.set_epsilon_deacy(linear_epsilon_decay)
 
         top_k = mab(df_expected, bandit_mab, num_rounds=10_000)[:top_n]
         return top_k
 
+    # Run MAB with fixed epsilon (no decay)
     def run_mab_fixed_epsilon(self, user_id: int, top_n: int = 10, epsilon: float = 0.1) -> pd.DataFrame:
         if not self.sgd_initialized:
             self.initialize_sgd_recommender()
@@ -232,7 +255,7 @@ class MovieRecommenderApp:
                 return pd.DataFrame()
         df_expected = self.sgd_model.get_recommendations(self.utility_matrix, user_id)
         df_expected = df_expected.merge(self.df_movies, on="movieId")[["title", "values"]].sort_index(ascending=True)
-        # Imposta l'indice per renderlo compatibile con il bandit
+        # Set the index to make it compatible with the bandit
         new_index = pd.RangeIndex(df_expected.shape[0], name="idxarm")
         df_expected.reset_index(drop=False, inplace=True)
         df_expected.set_index(new_index, inplace=True)
@@ -242,6 +265,7 @@ class MovieRecommenderApp:
         top_k = mab(df_expected, bandit_mab, num_rounds=10_000, decay=False)[:top_n]
         return top_k
 
+    # Predict rating for a given user/movie using SGD model
     def run_sgd_predictions(self, user_id: int, utility_matrix: pd.DataFrame) -> float:
         if not self.sgd_initialized:
             self.initialize_sgd_recommender()
@@ -249,6 +273,7 @@ class MovieRecommenderApp:
                 return 0.0
         return self.sgd_model.get_recommendations(utility_matrix, user_id)
 
+    # Predict rating for a given user/movie using KNN (collaborative filtering)
     def run_knn_predictions(self, user_id: int, movie_id: int) -> float:
         if not self.collaborative_initialized:
             self.initialize_collaborative_recommender()
@@ -292,7 +317,7 @@ def user_movies_list(user_id):
         return jsonify({"error": True, "message": f"User with ID {user_id} not found."}), 404
 
     user_ratings = app_instance.df_ratings[app_instance.df_ratings["userId"] == user_id]
-    user_movies = user_ratings.merge(app_instance.df_with_abstracts, on="movieId", suffixes=("", "_drop")).fillna("Dati non trovati")
+    user_movies = user_ratings.merge(app_instance.df_with_abstracts, on="movieId", suffixes=("", "_drop")).fillna("Data not found")
     user_movies = user_movies.drop(columns=["dbpedia_abstract", "dbpedia_director"])
     user_movies = user_movies.loc[:, ~user_movies.columns.str.contains("_drop")]
     user_movies = user_movies.to_dict(orient="records")
@@ -316,7 +341,7 @@ def content_recommendations():
     top_n = data.get("top_n", 10)
     results = app_instance.run_content_recommender(title, top_n).to_dict(orient="records")
 
-    # Aggiungi informazioni sul film originale
+    # Add original movie information
     response = {"original_movie": {"title": title}, "recommendations": results}
 
     return jsonify(response)
@@ -338,15 +363,15 @@ def content_recommendations_mab():
     for movie_id in results_ids:
         movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
         if not movie_row.empty:
-            # Converti il DataFrame row in un dict
+            # Convert the DataFrame row to a dict
             movie_dict = movie_row.iloc[0].to_dict()
-            # Converti tutti i valori NumPy in tipi Python standard
+            # Convert all NumPy values to standard Python types
             ordered_results.append({k: v.item() if isinstance(v, np.number) else v for k, v in movie_dict.items()})
 
-    # La lista ordered_results ora contiene i dizionari nell'ordine originale
+    # The ordered_results list now contains the dictionaries in the original order
     results = ordered_results
 
-    # Aggiungi informazioni sul film originale
+    # Add original movie information
     response = {"original_movie": {"title": title}, "recommendations": results}
 
     return jsonify(response)
@@ -366,17 +391,17 @@ def item_recommendations():
     if len(movie) == 0:
         return jsonify({"error": True, "message": f"Movie with ID {movie_id} not found."}), 404
 
-    # Ottieni i dettagli del film originale
+    # Get the original movie details
     original_movie = app_instance.show_movie_details(movie_id)
 
-    # Ottieni le raccomandazioni
+    # Get the recommendations
     df = app_instance.run_collaborative_item_recommender(movie_id, top_n)
     df = df.reset_index()
     df_results = df.merge(app_instance.df_with_abstracts, on="movieId", suffixes=("", "_drop"))
     df_results = df_results.loc[:, ~df_results.columns.str.contains("_drop")]
     results = df_results.to_dict(orient="records")
 
-    # Crea la risposta con il film originale e le raccomandazioni
+    # Create the response with the original movie and recommendations
     response = {"original_movie": {"id": movie_id, "title": original_movie.get("title", "Unknown")}, "recommendations": results}
 
     return jsonify(response)
@@ -395,28 +420,28 @@ def item_recommendations_mab():
     if len(movie) == 0:
         return jsonify({"error": True, "message": f"Movie with ID {movie_id} not found."}), 404
 
-    # Ottieni i dettagli del film originale
+    # Get the original movie details
     original_movie = app_instance.show_movie_details(movie_id)
 
-    # Ottieni le raccomandazioni
+    # Get the recommendations
     results_ids = app_instance.run_collaborative_item_recommender_mab(movie_id, top_n)
 
-    # Converto results_ids in lista di interi Python standard se è un array NumPy
+    # Convert results_ids to a list of standard Python integers if it's a NumPy array
     if isinstance(results_ids, np.ndarray):
         results_ids = results_ids.tolist()
 
     ordered_results = []
 
-    # Itera attraverso gli ID nell'ordine originale
+    # Iterate through the IDs in the original order
     for movie_id in results_ids:
         movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
         if not movie_row.empty:
-            # Converti il DataFrame row in un dict
+            # Convert the DataFrame row to a dict
             movie_dict = movie_row.iloc[0].to_dict()
-            # Converti tutti i valori NumPy in tipi Python standard
+            # Convert all NumPy values to standard Python types
             ordered_results.append({k: v.item() if isinstance(v, np.number) else v for k, v in movie_dict.items()})
 
-    # Crea la risposta con il film originale e le raccomandazioni
+    # Create the response with the original movie and recommendations
     response = {
         "original_movie": {"id": movie_id if not isinstance(movie_id, np.number) else movie_id.item(), "title": original_movie.get("title", "Unknown")},
         "recommendations": ordered_results,
@@ -468,12 +493,12 @@ def user_recommendations_mab():
     for movie_id in results_ids:
         movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
         if not movie_row.empty:
-            # Converti il DataFrame row in un dict
+            # Convert the DataFrame row to a dict
             movie_dict = movie_row.iloc[0].to_dict()
-            # Converti tutti i valori NumPy in tipi Python standard
+            # Convert all NumPy values to standard Python types
             ordered_results.append({k: v.item() if isinstance(v, np.number) else v for k, v in movie_dict.items()})
 
-    # La lista ordered_results ora contiene i dizionari nell'ordine originale
+    # The ordered_results list now contains the dictionaries in the original order
     results = ordered_results
     json_response = {"userId": user_id, "results": results}
 
@@ -525,13 +550,13 @@ def sgd_recommendations():
     results_ids = app_instance.run_sgd_recommendations(user_id, top_n).index.tolist()
     ordered_results = []
 
-    # Itera attraverso gli ID nell'ordine originale
+    # Iterate through the IDs in the original order
     for movie_id in results_ids:
         movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
         if not movie_row.empty:
-            # Converti il DataFrame row in un dict
+            # Convert the DataFrame row to a dict
             movie_dict = movie_row.iloc[0].to_dict()
-            # Converti tutti i valori NumPy in tipi Python standard
+            # Convert all NumPy values to standard Python types
             ordered_results.append({k: v.item() if isinstance(v, np.number) else v for k, v in movie_dict.items()})
 
     results = ordered_results
@@ -555,16 +580,16 @@ def mab_sgd_exp_epsilon_recommendations():
 
     ordered_results = []
 
-    # Itera attraverso gli ID nell'ordine originale
+    # Iterate through the IDs in the original order
     for movie_id in results_ids:
         movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
         if not movie_row.empty:
-            # Converti il DataFrame row in un dict
+            # Convert the DataFrame row to a dict
             movie_dict = movie_row.iloc[0].to_dict()
-            # Converti tutti i valori NumPy in tipi Python standard
+            # Convert all NumPy values to standard Python types
             ordered_results.append({k: v.item() if isinstance(v, np.number) else v for k, v in movie_dict.items()})
 
-    # La lista ordered_results ora contiene i dizionari nell'ordine originale
+    # The ordered_results list now contains the dictionaries in the original order
     results = ordered_results
     json_response = {"userId": user_id, "results": results}
     return jsonify(json_response)
@@ -576,7 +601,7 @@ def mab_sgd_fixed_epsilon_recommendations():
     user_id = data.get("user_id", 0)
     top_n = data.get("top_n", 10)
     epsilon = data.get("epsilon", 0.1)
-    epsilon = float(epsilon)  # Assicurati che epsilon sia un float
+    epsilon = float(epsilon)  # Ensure epsilon is a float
 
     if user_id <= 0:
         return jsonify({"error": True, "message": "User ID must be a positive integer."}), 404
@@ -589,16 +614,16 @@ def mab_sgd_fixed_epsilon_recommendations():
 
     ordered_results = []
 
-    # Itera attraverso gli ID nell'ordine originale
+    # Iterate through the IDs in the original order
     for movie_id in results_ids:
         movie_row = app_instance.df_with_abstracts[app_instance.df_with_abstracts["movieId"] == movie_id]
         if not movie_row.empty:
-            # Converti il DataFrame row in un dict
+            # Convert the DataFrame row to a dict
             movie_dict = movie_row.iloc[0].to_dict()
-            # Converti tutti i valori NumPy in tipi Python standard
+            # Convert all NumPy values to standard Python types
             ordered_results.append({k: v.item() if isinstance(v, np.number) else v for k, v in movie_dict.items()})
 
-    # La lista ordered_results ora contiene i dizionari nell'ordine originale
+    # The ordered_results list now contains the dictionaries in the original order
     results = ordered_results
     json_response = {"userId": user_id, "results": results}
     return jsonify(json_response)
@@ -613,11 +638,11 @@ def predict():
     movie.reset_index(drop=True, inplace=True)
 
     if len(movie) == 0:
-        return jsonify({"error": True, "message": f"Il film con ID {movie_id} non è stato trovato."}), 404
+        return jsonify({"error": True, "message": f"Movie with ID {movie_id} not found."}), 404
 
-    # Verifica se l'utente esiste
+    # Check if the user exists
     if user_id > 610:
-        return jsonify({"error": True, "message": f"L'utente con ID {user_id} non esiste."}), 404
+        return jsonify({"error": True, "message": f"User with ID {user_id} does not exist."}), 404
 
     ratings = app_instance.df_ratings[app_instance.df_ratings["movieId"] == movie_id]
     if len(ratings) > 0:
@@ -652,11 +677,11 @@ def predict_knn():
     movie.reset_index(drop=True, inplace=True)
 
     if len(movie) == 0:
-        return jsonify({"error": True, "message": f"Il film con ID {movie_id} non è stato trovato."}), 404
+        return jsonify({"error": True, "message": f"Movie with ID {movie_id} not found."}), 404
 
-    # Verifica se l'utente esiste
+    # Check if the user exists
     if user_id > 610:
-        return jsonify({"error": True, "message": f"L'utente con ID {user_id} non esiste."}), 404
+        return jsonify({"error": True, "message": f"User with ID {user_id} does not exist."}), 404
 
     ratings = app_instance.df_ratings[app_instance.df_ratings["movieId"] == movie_id]
     if len(ratings) > 0:
