@@ -75,7 +75,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Access the app at: `http://localhost:5000`
+Access the app at: `index.html`
 
 ### 4.2 Requirements
 
