@@ -13,15 +13,15 @@ function hideLoading(id) {
 }
 
 function shortenTitle(title, maxLength = 50) {
-  const match = title.match(/\((\d{4})\)$/); // Trova l'anno tra parentesi
-  const year = match ? ` ${match[0]}` : ''; // Se l'anno esiste, lo mantiene
+  const match = title.match(/\((\d{4})\)$/); // Find year in parentheses
+  const year = match ? ` ${match[0]}` : ''; // If year exists, keep it
 
-  let cleanTitle = title.replace(/\(\d{4}\)$/, '').trim(); // Rimuove l'anno dal titolo
+  let cleanTitle = title.replace(/\(\d{4}\)$/, '').trim(); // Remove year from title
   if (cleanTitle.length > maxLength) {
     cleanTitle = cleanTitle.substring(0, maxLength).trim() + '...';
   }
 
-  return cleanTitle + year; // Ricompone il titolo con l'anno
+  return cleanTitle + year; // Reassemble title with year
 }
 
 async function searchMovies() {
@@ -71,7 +71,7 @@ async function getMovieDetails() {
     if (!response.ok || data.error) {
       displayError(
         'movieDetails',
-        data.message || 'Si è verificato un errore durante la richiesta'
+        data.message || 'An error occurred during the request'
       );
       return;
     }
@@ -80,7 +80,7 @@ async function getMovieDetails() {
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (error) {
-    displayError('movieDetails', 'Errore di connessione al server');
+    displayError('movieDetails', 'Server connection error');
   } finally {
     hideLoading('movieDetailsLoading');
   }
@@ -102,7 +102,7 @@ async function getUserMovies() {
     if (!response.ok || data.error) {
       displayError(
         'userMoviesResults',
-        data.message || 'Si è verificato un errore durante la richiesta'
+        data.message || 'An error occurred during the request'
       );
       return;
     }
@@ -113,7 +113,7 @@ async function getUserMovies() {
 
     displayUserMovies('userMoviesResults', data);
   } catch (error) {
-    displayError('userMoviesResults', 'Errore di connessione al server');
+    displayError('userMoviesResults', 'Server connection error');
   } finally {
     hideLoading('userMoviesLoading');
   }
@@ -138,14 +138,14 @@ async function getContentRecommendations() {
     if (!response.ok || data.error) {
       displayError(
         'contentResults',
-        data.message || 'Si è verificato un errore durante la richiesta'
+        data.message || 'An error occurred during the request'
       );
       return;
     }
 
     displayResults('contentResults', data, ['id', 'title', 'genres']);
   } catch (error) {
-    displayError('contentResults', 'Errore di connessione al server');
+    displayError('contentResults', 'Server connection error');
   } finally {
     hideLoading('contentLoading');
   }
@@ -171,7 +171,7 @@ async function getSGDRecommandationMabFixed() {
     if (!response.ok || data.error) {
       displayError(
         'SGDMabFixedMovieResults',
-        data.message || 'Si è verificato un errore durante la richiesta'
+        data.message || 'An error occurred during the request'
       );
       return;
     }
@@ -182,7 +182,7 @@ async function getSGDRecommandationMabFixed() {
 
     displayResults('SGDMabFixedMovieResults', data, ['id', 'title', 'genres']);
   } catch (error) {
-    displayError('SGDMabFixedMovieResults', 'Errore di connessione al server');
+    displayError('SGDMabFixedMovieResults', 'Server connection error');
   } finally {
     hideLoading('SGDMabFixedLoading');
   }
@@ -207,13 +207,13 @@ async function getContentRecommendationsWithMab() {
     if (!response.ok || data.error) {
       displayError(
         'contentMabResults',
-        data.message || 'Si è verificato un errore durante la richiesta'
+        data.message || 'An error occurred during the request'
       );
       return;
     }
     displayResults('contentMabResults', data, ['id', 'title', 'genres']);
   } catch (error) {
-    displayError('contentMabResults', 'Errore di connessione al server');
+    displayError('contentMabResults', 'Server connection error');
   } finally {
     hideLoading('contentMabLoading');
   }
@@ -238,14 +238,14 @@ async function getItemRecommendations() {
     if (!response.ok || data.error) {
       displayError(
         'itemResults',
-        data.message || 'Si è verificato un errore durante la richiesta'
+        data.message || 'An error occurred during the request'
       );
       return;
     }
 
     displayResults('itemResults', data, ['id', 'title', 'genres']);
   } catch (error) {
-    displayError('itemResults', 'Errore di connessione al server');
+    displayError('itemResults', 'Server connection error');
   } finally {
     hideLoading('itemLoading');
   }
@@ -270,14 +270,14 @@ async function getItemRecommendationsWithMab() {
     if (!response.ok || data.error) {
       displayError(
         'itemResultsMAB',
-        data.message || 'Si è verificato un errore durante la richiesta'
+        data.message || 'An error occurred during the request'
       );
       return;
     }
 
     displayResults('itemResultsMAB', data, ['id', 'title', 'genres']);
   } catch (error) {
-    displayError('itemResultsMAB', 'Errore di connessione al server');
+    displayError('itemResultsMAB', 'Server connection error');
   } finally {
     hideLoading('itemLoadingMAB');
   }
@@ -303,14 +303,14 @@ async function getUserRecommendations() {
     if (!response.ok || data.error) {
       displayError(
         'userResults',
-        data.message || 'Si è verificato un errore durante la richiesta'
+        data.message || 'An error occurred during the request'
       );
       return;
     }
 
     displayResults('userResults', data, ['id', 'title', 'genres', 'values']);
   } catch (error) {
-    displayError('userResults', 'Errore di connessione al server');
+    displayError('userResults', 'Server connection error');
   } finally {
     hideLoading('userLoading');
   }
@@ -344,7 +344,7 @@ async function getUserRecommendationsWithMab() {
   } catch (error) {
     displayError(
       'userResultsMAB',
-      data.message || 'Si è verificato un errore durante la richiesta'
+      data.message || 'An error occurred during the request'
     );
   } finally {
     hideLoading('userLoadingMAB');
@@ -370,14 +370,14 @@ async function getDirectorMovieRecommendations() {
     if (!response.ok || data.error) {
       displayError(
         'directorMovieResults',
-        data.message || 'Si è verificato un errore durante la richiesta'
+        data.message || 'An error occurred during the request'
       );
       return;
     }
 
     displayDirectorResults('directorMovieResults', data.result);
   } catch (error) {
-    displayError('directorMovieResults', 'Errore di connessione al server');
+    displayError('directorMovieResults', 'Server connection error');
   } finally {
     hideLoading('directorMovieLoading');
   }
@@ -425,14 +425,14 @@ async function getSGDRecommandation() {
     if (!response.ok || data.error) {
       displayError(
         'SGDMovieResults',
-        data.message || 'Si è verificato un errore durante la richiesta'
+        data.message || 'An error occurred during the request'
       );
       return;
     }
 
     displayResults('SGDMovieResults', data, ['id', 'title', 'genres']);
   } catch (error) {
-    displayError('SGDMovieResults', 'Errore di connessione al server');
+    displayError('SGDMovieResults', 'Server connection error');
   } finally {
     hideLoading('SGDLoading');
   }
@@ -457,7 +457,7 @@ async function getSGDRecommandationMabExp() {
     if (!response.ok || data.error) {
       displayError(
         'SGDMabMovieResults',
-        data.message || 'Si è verificato un errore durante la richiesta'
+        data.message || 'An error occurred during the request'
       );
       return;
     }
@@ -468,7 +468,7 @@ async function getSGDRecommandationMabExp() {
 
     displayResults('SGDMabMovieResults', data, ['id', 'title', 'genres']);
   } catch (error) {
-    displayError('SGDMabMovieResults', 'Errore di connessione al server');
+    displayError('SGDMabMovieResults', 'Server connection error');
   } finally {
     hideLoading('SGDMabLoading');
   }
@@ -497,14 +497,14 @@ async function getPrediction() {
     if (!response.ok || data.error) {
       displayError(
         'predictionResult',
-        data.message || 'Si è verificato un errore durante la richiesta'
+        data.message || 'An error occurred during the request'
       );
       return;
     }
 
     displayPrediction('predictionResult', data);
   } catch (error) {
-    displayError('predictionResult', 'Errore di connessione al server');
+    displayError('predictionResult', 'Server connection error');
   } finally {
     hideLoading('predictionLoading');
   }
@@ -536,21 +536,21 @@ async function getPredictionKNN() {
     if (!response.ok || data.error) {
       displayError(
         'predictionResultKNN',
-        data.message || 'Si è verificato un errore durante la richiesta'
+        data.message || 'An error occurred during the request'
       );
       return;
     }
 
     displayPrediction('predictionResultKNN', data);
   } catch (error) {
-    displayError('predictionResultKNN', 'Errore di connessione al server');
+    displayError('predictionResultKNN', 'Server connection error');
   } finally {
     hideLoading('predictionLoadingKNN');
   }
 }
 
 async function getMoviePoster(tmdbId, imdbId) {
-  // Prima prova con tmdbId se disponibile
+  // First try with tmdbId if available
   if (tmdbId) {
     try {
       const response = await fetch(
@@ -562,14 +562,14 @@ async function getMoviePoster(tmdbId, imdbId) {
         return `${TMDB_IMAGE_BASE_URL}${data.poster_path}`;
       }
     } catch (error) {
-      console.error('Errore nel recupero del poster con tmdbId:', error);
+      console.error('Error retrieving poster with tmdbId:', error);
     }
   }
 
-  // Se tmdbId non ha funzionato o non è disponibile, prova con imdbId
+  // If tmdbId didn't work or is not available, try with imdbId
   if (imdbId) {
     try {
-      // Se imdbId ha zeri iniziali, assicurati che siano preservati
+      // If imdbId has leading zeros, make sure they are preserved
       const formattedImdbId = imdbId.toString().startsWith('tt')
         ? imdbId
         : `tt${imdbId}`;
@@ -587,11 +587,11 @@ async function getMoviePoster(tmdbId, imdbId) {
         return `${TMDB_IMAGE_BASE_URL}${data.movie_results[0].poster_path}`;
       }
     } catch (error) {
-      console.error('Errore nel recupero del poster con imdbId:', error);
+      console.error('Error retrieving poster with imdbId:', error);
     }
   }
 
-  // Restituisci un'immagine placeholder se non è stato possibile ottenere la copertina
+  // Return a placeholder image if it was not possible to get the cover
   return 'https://placehold.co/140x210/png?text=No+Image+Found&font=roboto';
 }
 
@@ -599,7 +599,7 @@ async function displayResults(elementId, data, columns) {
   const element = document.getElementById(elementId);
   element.innerHTML = '';
 
-  // Verifica se i dati sono nel nuovo formato con original_movie e recommendations
+  // Check if data is in new format with original_movie and recommendations
   const hasOriginalMovie =
     data && data.original_movie && data.original_movie.title;
   const results = hasOriginalMovie
@@ -607,19 +607,19 @@ async function displayResults(elementId, data, columns) {
     : data.results || data;
 
   if (results && results.length > 0) {
-    // Se abbiamo informazioni sul film originale, creiamo un banner in cima
+    // If we have original movie information, create a banner at the top
     if (hasOriginalMovie) {
       const originalMovieBanner = document.createElement('div');
       originalMovieBanner.className = 'original-movie-banner';
 
       const bannerTitle = document.createElement('h3');
-      bannerTitle.textContent = 'Raccomandazioni basate su:';
+      bannerTitle.textContent = 'Recommendations based on:';
 
       const movieTitle = document.createElement('div');
       movieTitle.className = 'original-movie-title';
       movieTitle.textContent = data.original_movie.title;
 
-      // Se è disponibile anche l'ID, lo mostriamo
+      // If ID is also available, show it
       if (data.original_movie.movieId) {
         const movieId = document.createElement('span');
         movieId.className = 'original-movie-id';
@@ -635,7 +635,7 @@ async function displayResults(elementId, data, columns) {
       userBanner.className = 'original-movie-banner';
 
       const bannerTitle = document.createElement('h3');
-      bannerTitle.textContent = "Raccomandazioni basate sull'utente:";
+      bannerTitle.textContent = 'Recommendations based on user:';
 
       const userIdElement = document.createElement('div');
       userIdElement.className = 'original-movie-title';
@@ -649,14 +649,14 @@ async function displayResults(elementId, data, columns) {
     const list = document.createElement('ul');
     list.className = 'movie-list';
 
-    // Processa ogni film nella lista dei risultati
+    // Process each movie in the results list
     for (const item of results) {
       const listItem = document.createElement('li');
       listItem.className = 'movie-card-with-poster';
-      listItem.style.cursor = 'pointer'; // Aggiunge effetto cliccabile
-      listItem.onclick = () => getMovieDetailsFromId(item.movieId); // Aggiungi evento click
+      listItem.style.cursor = 'pointer'; // Add clickable effect
+      listItem.onclick = () => getMovieDetailsFromId(item.movieId); // Add click event
 
-      // Aggiunta del poster del film
+      // Add movie poster
       const posterContainer = document.createElement('div');
       posterContainer.className = 'poster-container';
 
@@ -665,7 +665,7 @@ async function displayResults(elementId, data, columns) {
       posterImg.src = 'https://placehold.co/140x210/png?text=Loading...';
       posterImg.alt = `${item.title || 'Movie'} poster`;
 
-      // Carica poster in modo asincrono
+      // Load poster asynchronously
       if (item.tmdbId || item.imdbId) {
         getMoviePoster(item.tmdbId, item.imdbId).then((url) => {
           posterImg.src = url;
@@ -677,11 +677,11 @@ async function displayResults(elementId, data, columns) {
       posterContainer.appendChild(posterImg);
       listItem.appendChild(posterContainer);
 
-      // Contenitore per le informazioni
+      // Container for information
       const infoContainer = document.createElement('div');
       infoContainer.className = 'movie-info';
 
-      // Header con titolo
+      // Header with title
       const header = document.createElement('div');
       header.className = 'movie-header';
 
@@ -699,11 +699,11 @@ async function displayResults(elementId, data, columns) {
 
       infoContainer.appendChild(header);
 
-      // Metadata del film (anno, durata, genere)
+      // Movie metadata (anno, durata, genere)
       const metadata = document.createElement('div');
       metadata.className = 'movie-metadata';
 
-      // Anno (se disponibile)
+      // Year (if available)
       if (item.year) {
         const yearItem = document.createElement('span');
         yearItem.className = 'metadata-item';
@@ -711,7 +711,7 @@ async function displayResults(elementId, data, columns) {
         metadata.appendChild(yearItem);
       }
 
-      // Generi (se disponibili)
+      // Genres (if available)
       if (item.genres) {
         const genreItem = document.createElement('span');
         genreItem.className = 'metadata-item';
@@ -719,7 +719,7 @@ async function displayResults(elementId, data, columns) {
         metadata.appendChild(genreItem);
       }
 
-      // Durata (se disponibile)
+      // Duration (if available)
       if (item.runtime) {
         const runtimeItem = document.createElement('span');
         runtimeItem.className = 'metadata-item';
@@ -727,7 +727,7 @@ async function displayResults(elementId, data, columns) {
         metadata.appendChild(runtimeItem);
       }
 
-      // Valutazione (se disponibile)
+      // Rating (if available)
       if (item.avg_rating) {
         const ratingItem = document.createElement('span');
         ratingItem.className = 'metadata-item';
@@ -739,13 +739,13 @@ async function displayResults(elementId, data, columns) {
 
       infoContainer.appendChild(metadata);
 
-      // Contenuto principale
+      // Main content
       const content = document.createElement('div');
       content.className = 'movie-content';
 
-      // Aggiungi le altre colonne specificate
+      // Add other specified columns
       columns.forEach((col) => {
-        // Salta colonne già mostrate
+        // Skip columns already shown
         if (
           [
             'title',
@@ -777,12 +777,12 @@ async function displayResults(elementId, data, columns) {
 
       infoContainer.appendChild(content);
 
-      // Aggiungi informazioni aggiuntive (se disponibili)
+      // Add additional information (se disponibili)
       if (item.dbpedia_abstract || item.overview) {
         const additionalInfo = document.createElement('div');
         additionalInfo.className = 'additional-movie-info';
 
-        // Aggiungi la sinossi/abstract se disponibile
+        // Add synopsis/abstract if available
         if (item.dbpedia_abstract || item.overview) {
           const abstract = document.createElement('p');
           const abstractText = item.dbpedia_abstract || item.overview;
@@ -793,7 +793,7 @@ async function displayResults(elementId, data, columns) {
           additionalInfo.appendChild(abstract);
         }
 
-        // Aggiungi regista se disponibile
+        // Add director if available
         if (item.dbpedia_director) {
           const director = document.createElement('p');
           director.innerHTML = `<strong>Director:</strong> ${item.dbpedia_director}`;
@@ -835,7 +835,7 @@ async function displaySearchResults(elementId, data, columns) {
       originalMovieBanner.className = 'original-movie-banner';
 
       const bannerTitle = document.createElement('h3');
-      bannerTitle.textContent = 'Raccomandazioni basate su:';
+      bannerTitle.textContent = 'Recommendations based on:';
 
       const movieTitle = document.createElement('div');
       movieTitle.className = 'original-movie-title';
@@ -857,7 +857,7 @@ async function displaySearchResults(elementId, data, columns) {
       userBanner.className = 'original-movie-banner';
 
       const bannerTitle = document.createElement('h3');
-      bannerTitle.textContent = "Raccomandazioni basate sull'utente:";
+      bannerTitle.textContent = "Recommendations based on user:";
 
       const userIdElement = document.createElement('div');
       userIdElement.className = 'original-movie-title';
@@ -871,14 +871,14 @@ async function displaySearchResults(elementId, data, columns) {
     const list = document.createElement('ul');
     list.className = 'movie-list';
 
-    // Processa ogni film nella lista dei risultati
+    // Process each movie in the results list
     for (const item of results) {
       const listItem = document.createElement('li');
       listItem.className = 'movie-card-with-poster';
-      listItem.style.cursor = 'pointer'; // Aggiunge effetto cliccabile
-      listItem.onclick = () => getMovieDetailsFromId(item.movieId); // Aggiungi evento click
+      listItem.style.cursor = 'pointer'; // Add clickable effect
+      listItem.onclick = () => getMovieDetailsFromId(item.movieId); // Add click event
 
-      // Aggiunta del poster del film
+      // Add movie poster
       const posterContainer = document.createElement('div');
       posterContainer.className = 'poster-container';
 
@@ -887,7 +887,7 @@ async function displaySearchResults(elementId, data, columns) {
       posterImg.src = 'https://placehold.co/140x210/png?text=Loading...';
       posterImg.alt = `${item.title || 'Movie'} poster`;
 
-      // Carica poster in modo asincrono
+      // Load poster asynchronously
       if (item.tmdbId || item.imdbId) {
         getMoviePoster(item.tmdbId, item.imdbId).then((url) => {
           posterImg.src = url;
@@ -899,11 +899,11 @@ async function displaySearchResults(elementId, data, columns) {
       posterContainer.appendChild(posterImg);
       listItem.appendChild(posterContainer);
 
-      // Contenitore per le informazioni
+      // Container for information
       const infoContainer = document.createElement('div');
       infoContainer.className = 'movie-info';
 
-      // Header con titolo
+      // Header with title
       const header = document.createElement('div');
       header.className = 'movie-header';
 
@@ -921,11 +921,11 @@ async function displaySearchResults(elementId, data, columns) {
 
       infoContainer.appendChild(header);
 
-      // Metadata del film (anno, durata, genere)
+      // Movie metadata (anno, durata, genere)
       const metadata = document.createElement('div');
       metadata.className = 'movie-metadata';
 
-      // Anno (se disponibile)
+      // Year (if available)
       if (item.year) {
         const yearItem = document.createElement('span');
         yearItem.className = 'metadata-item';
@@ -933,7 +933,7 @@ async function displaySearchResults(elementId, data, columns) {
         metadata.appendChild(yearItem);
       }
 
-      // Generi (se disponibili)
+      // Genres (if available)
       if (item.genres) {
         const genreItem = document.createElement('span');
         genreItem.className = 'metadata-item';
@@ -941,7 +941,7 @@ async function displaySearchResults(elementId, data, columns) {
         metadata.appendChild(genreItem);
       }
 
-      // Durata (se disponibile)
+      // Duration (if available)
       if (item.runtime) {
         const runtimeItem = document.createElement('span');
         runtimeItem.className = 'metadata-item';
@@ -949,7 +949,7 @@ async function displaySearchResults(elementId, data, columns) {
         metadata.appendChild(runtimeItem);
       }
 
-      // Valutazione (se disponibile)
+      // Rating (if available)
       if (item.avg_rating) {
         const ratingItem = document.createElement('span');
         ratingItem.className = 'metadata-item';
@@ -961,13 +961,13 @@ async function displaySearchResults(elementId, data, columns) {
 
       infoContainer.appendChild(metadata);
 
-      // Contenuto principale
+      // Main content
       const content = document.createElement('div');
       content.className = 'movie-content';
 
-      // Aggiungi le altre colonne specificate
+      // Add other specified columns
       columns.forEach((col) => {
-        // Salta colonne già mostrate
+        // Skip columns already shown
         if (
           [
             'title',
@@ -999,12 +999,12 @@ async function displaySearchResults(elementId, data, columns) {
 
       infoContainer.appendChild(content);
 
-      // Aggiungi informazioni aggiuntive (se disponibili)
+      // Add additional information (se disponibili)
       if (item.dbpedia_abstract || item.overview) {
         const additionalInfo = document.createElement('div');
         additionalInfo.className = 'additional-movie-info';
 
-        // Aggiungi la sinossi/abstract se disponibile
+        // Add synopsis/abstract if available
         if (item.dbpedia_abstract || item.overview) {
           const abstract = document.createElement('p');
           const abstractText = item.dbpedia_abstract || item.overview;
@@ -1015,7 +1015,7 @@ async function displaySearchResults(elementId, data, columns) {
           additionalInfo.appendChild(abstract);
         }
 
-        // Aggiungi regista se disponibile
+        // Add director if available
         if (item.dbpedia_director) {
           const director = document.createElement('p');
           director.innerHTML = `<strong>Director:</strong> ${item.dbpedia_director}`;
@@ -1063,7 +1063,7 @@ async function displayDetails(elementId, details) {
     posterImg.src = 'https://placehold.co/140x210/png?text=Loading...';
     posterImg.alt = `${details.title || 'Movie'} poster`;
 
-    // Carica poster in modo asincrono
+    // Load poster asynchronously
     if (details.tmdbId || details.imdbId) {
       getMoviePoster(details.tmdbId, details.imdbId).then((url) => {
         posterImg.src = url;
@@ -1075,11 +1075,11 @@ async function displayDetails(elementId, details) {
     posterContainer.appendChild(posterImg);
     movieCard.appendChild(posterContainer);
 
-    // Contenitore per le informazioni
+    // Container for information
     const infoContainer = document.createElement('div');
     infoContainer.className = 'movie-info';
 
-    // Header con titolo
+    // Header with title
     const header = document.createElement('div');
     header.className = 'movie-header';
 
@@ -1097,11 +1097,11 @@ async function displayDetails(elementId, details) {
 
     infoContainer.appendChild(header);
 
-    // Metadata del film (anno, durata, genere)
+    // Movie metadata (anno, durata, genere)
     const metadata = document.createElement('div');
     metadata.className = 'movie-metadata';
 
-    // Anno (se disponibile)
+    // Year (if available)
     if (details.year) {
       const yearItem = document.createElement('span');
       yearItem.className = 'metadata-item';
@@ -1109,7 +1109,7 @@ async function displayDetails(elementId, details) {
       metadata.appendChild(yearItem);
     }
 
-    // Generi (se disponibili)
+    // Genres (if available)
     if (details.genres) {
       if (details.genres.length > 46) {
         details.genres = details.genres.substring(0, 46) + '...';
@@ -1120,7 +1120,7 @@ async function displayDetails(elementId, details) {
       metadata.appendChild(genreItem);
     }
 
-    // Durata (se disponibile)
+    // Duration (if available)
     if (details.runtime) {
       const runtimeItem = document.createElement('span');
       runtimeItem.className = 'metadata-item';
@@ -1128,7 +1128,7 @@ async function displayDetails(elementId, details) {
       metadata.appendChild(runtimeItem);
     }
 
-    // Valutazione (se disponibile)
+    // Rating (if available)
     if (details.avg_rating) {
       const ratingItem = document.createElement('span');
       ratingItem.className = 'metadata-item';
@@ -1152,7 +1152,7 @@ async function displayDetails(elementId, details) {
 
     infoContainer.appendChild(metadata);
 
-    // Contenuto principale - abstract/sinossi
+    // Main content - abstract/sinossi
     if (details.dbpedia_abstract) {
       const abstractSection = document.createElement('div');
       abstractSection.className = 'additional-movie-info';
@@ -1251,8 +1251,8 @@ function displayDirectorResults(elementId, result) {
     // Intestazione con informazioni sul regista
     const header = document.createElement('div');
     header.className = 'result-header';
-    header.innerHTML = `<h3>Film diretti da ${result.director}</h3>
-                               <p>Mostrati ${result.films_shown} di ${result.total_films_found} film totali</p>`;
+    header.innerHTML = `<h3>Films directed by ${result.director}</h3>
+                               <p>Showing \ of \ total films</p>`;
     resultCard.appendChild(header);
 
     // Lista dei film
@@ -1275,7 +1275,7 @@ function displayDirectorResults(elementId, result) {
           actorsList.className = 'actors-list';
 
           const actorsTitle = document.createElement('p');
-          actorsTitle.textContent = 'Attori principali:';
+          actorsTitle.textContent = 'Main actors:';
           actorsList.appendChild(actorsTitle);
 
           const actorsUl = document.createElement('ul');
@@ -1357,14 +1357,14 @@ function displayUserMovies(elementId, data) {
     const list = document.createElement('ul');
     list.className = 'movie-list';
 
-    // Processa ogni film nella lista dei risultati
+    // Process each movie in the results list
     for (const item of results) {
       const listItem = document.createElement('li');
       listItem.className = 'movie-card-with-poster';
-      listItem.style.cursor = 'pointer'; // Aggiunge effetto cliccabile
-      listItem.onclick = () => getMovieDetailsFromId(item.movieId); // Aggiungi evento click
+      listItem.style.cursor = 'pointer'; // Add clickable effect
+      listItem.onclick = () => getMovieDetailsFromId(item.movieId); // Add click event
 
-      // Aggiunta del poster del film
+      // Add movie poster
       const posterContainer = document.createElement('div');
       posterContainer.className = 'poster-container';
 
@@ -1373,7 +1373,7 @@ function displayUserMovies(elementId, data) {
       posterImg.src = 'https://placehold.co/140x210/png?text=Loading...';
       posterImg.alt = `${item.title || 'Movie'} poster`;
 
-      // Carica poster in modo asincrono
+      // Load poster asynchronously
       if (item.tmdbId || item.imdbId) {
         getMoviePoster(item.tmdbId, item.imdbId).then((url) => {
           posterImg.src = url;
@@ -1385,11 +1385,11 @@ function displayUserMovies(elementId, data) {
       posterContainer.appendChild(posterImg);
       listItem.appendChild(posterContainer);
 
-      // Contenitore per le informazioni
+      // Container for information
       const infoContainer = document.createElement('div');
       infoContainer.className = 'movie-info';
 
-      // Header con titolo
+      // Header with title
       const header = document.createElement('div');
       header.className = 'movie-header';
 
@@ -1407,11 +1407,11 @@ function displayUserMovies(elementId, data) {
 
       infoContainer.appendChild(header);
 
-      // Metadata del film (anno, durata, genere)
+      // Movie metadata (anno, durata, genere)
       const metadata = document.createElement('div');
       metadata.className = 'movie-metadata';
 
-      // Anno (se disponibile)
+      // Year (if available)
       if (item.year) {
         const yearItem = document.createElement('span');
         yearItem.className = 'metadata-item';
@@ -1419,7 +1419,7 @@ function displayUserMovies(elementId, data) {
         metadata.appendChild(yearItem);
       }
 
-      // Generi (se disponibili)
+      // Genres (if available)
       if (item.genres) {
         if (item.genres.length > 40) {
           item.genres = item.genres.substring(0, 40) + '...';
@@ -1432,7 +1432,7 @@ function displayUserMovies(elementId, data) {
 
       infoContainer.appendChild(metadata);
 
-      // Contenuto principale
+      // Main content
       const content = document.createElement('div');
       content.className = 'movie-content';
 
@@ -1510,7 +1510,7 @@ async function displayDetails(elementId, details) {
     posterImg.src = 'https://placehold.co/140x210/png?text=Loading...';
     posterImg.alt = `${details.title || 'Movie'} poster`;
 
-    // Carica poster in modo asincrono
+    // Load poster asynchronously
     if (details.tmdbId || details.imdbId) {
       getMoviePoster(details.tmdbId, details.imdbId).then((url) => {
         posterImg.src = url;
@@ -1522,11 +1522,11 @@ async function displayDetails(elementId, details) {
     posterContainer.appendChild(posterImg);
     movieCard.appendChild(posterContainer);
 
-    // Contenitore per le informazioni
+    // Container for information
     const infoContainer = document.createElement('div');
     infoContainer.className = 'movie-info';
 
-    // Header con titolo
+    // Header with title
     const header = document.createElement('div');
     header.className = 'movie-header';
 
@@ -1544,11 +1544,11 @@ async function displayDetails(elementId, details) {
 
     infoContainer.appendChild(header);
 
-    // Metadata del film (anno, durata, genere)
+    // Movie metadata (anno, durata, genere)
     const metadata = document.createElement('div');
     metadata.className = 'movie-metadata';
 
-    // Anno (se disponibile)
+    // Year (if available)
     if (details.year) {
       const yearItem = document.createElement('span');
       yearItem.className = 'metadata-item';
@@ -1556,7 +1556,7 @@ async function displayDetails(elementId, details) {
       metadata.appendChild(yearItem);
     }
 
-    // Generi (se disponibili)
+    // Genres (if available)
     if (details.genres) {
       if (details.genres.length > 46) {
         details.genres = details.genres.substring(0, 46) + '...';
@@ -1567,7 +1567,7 @@ async function displayDetails(elementId, details) {
       metadata.appendChild(genreItem);
     }
 
-    // Durata (se disponibile)
+    // Duration (if available)
     if (details.runtime) {
       const runtimeItem = document.createElement('span');
       runtimeItem.className = 'metadata-item';
@@ -1575,7 +1575,7 @@ async function displayDetails(elementId, details) {
       metadata.appendChild(runtimeItem);
     }
 
-    // Valutazione (se disponibile)
+    // Rating (if available)
     if (details.avg_rating) {
       const ratingItem = document.createElement('span');
       ratingItem.className = 'metadata-item';
@@ -1626,7 +1626,7 @@ async function displayDetails(elementId, details) {
 
     infoContainer.appendChild(metadata);
 
-    // Contenuto principale - abstract/sinossi
+    // Main content - abstract/sinossi
     if (details.dbpedia_abstract) {
       const abstractSection = document.createElement('div');
       abstractSection.className = 'additional-movie-info';
@@ -1725,8 +1725,8 @@ function displayDirectorResults(elementId, result) {
     // Intestazione con informazioni sul regista
     const header = document.createElement('div');
     header.className = 'result-header';
-    header.innerHTML = `<h3>Film diretti da ${result.director}</h3>
-                               <p>Mostrati ${result.films_shown} di ${result.total_films_found} film totali</p>`;
+    header.innerHTML = `<h3>Films directed by ${result.director}</h3>
+                               <p>Showing \ of \ total films</p>`;
     resultCard.appendChild(header);
 
     // Lista dei film
@@ -1749,7 +1749,7 @@ function displayDirectorResults(elementId, result) {
           actorsList.className = 'actors-list';
 
           const actorsTitle = document.createElement('p');
-          actorsTitle.textContent = 'Attori principali:';
+          actorsTitle.textContent = 'Main actors:';
           actorsList.appendChild(actorsTitle);
 
           const actorsUl = document.createElement('ul');
