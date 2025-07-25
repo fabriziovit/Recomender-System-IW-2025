@@ -154,7 +154,7 @@ Models latent features for users and items, plus global and local biases. Traine
 
 **Reward function:**
 
-```math
+```python
 reward = predicted_rating / (1 + log(1 + selections))
 ```
 
